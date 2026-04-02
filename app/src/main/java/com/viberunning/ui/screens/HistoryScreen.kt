@@ -88,6 +88,7 @@ private fun ActivityCard(
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Date and day of week
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -97,14 +98,23 @@ private fun ActivityCard(
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = FormatUtils.formatTime(activity.startTime),
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = FormatUtils.formatDayOfWeek(activity.startTime),
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
+            // Start and end times
+            val endTimeText = activity.endTime?.let { FormatUtils.formatTime(it) } ?: "—"
+            Text(
+                text = "${FormatUtils.formatTime(activity.startTime)} – $endTimeText",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Stats row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween

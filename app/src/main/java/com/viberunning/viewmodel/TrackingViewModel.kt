@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.viberunning.VibeRunningApp
 import com.viberunning.service.LocationTrackingService
+import com.viberunning.util.GpsStatusMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +18,11 @@ import kotlinx.coroutines.launch
 
 class TrackingViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = (application as VibeRunningApp).repository
+    private val app = application as VibeRunningApp
+    private val repository = app.repository
+    private val gpsMonitor = app.gpsStatusMonitor
+
+    val gpsSignal: StateFlow<GpsStatusMonitor.GpsSignal> = gpsMonitor.signal
 
     private var trackingService: LocationTrackingService? = null
     private var isBound = false
@@ -55,7 +60,16 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun startGpsMonitoring() {
+        gpsMonitor.startMonitoring()
+    }
+
+    fun stopGpsMonitoring() {
+        gpsMonitor.stopMonitoring()
+    }
+
     fun startActivity() {
+        gpsMonitor.stopMonitoring()
         viewModelScope.launch {
             val activityId = repository.createActivity()
             _currentActivityId.value = activityId
@@ -133,6 +147,7 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
+        gpsMonitor.stopMonitoring()
         if (isBound) {
             getApplication<VibeRunningApp>().unbindService(serviceConnection)
             isBound = false

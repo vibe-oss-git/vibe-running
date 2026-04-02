@@ -56,7 +56,12 @@ object FormatUtils {
     }
 
     fun formatDate(timestamp: Long): String {
-        val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+        return sdf.format(Date(timestamp))
+    }
+
+    fun formatDayOfWeek(timestamp: Long): String {
+        val sdf = SimpleDateFormat("EEEE", Locale.getDefault())
         return sdf.format(Date(timestamp))
     }
 
@@ -66,7 +71,7 @@ object FormatUtils {
     }
 
     fun formatDateTime(timestamp: Long): String {
-        val sdf = SimpleDateFormat("MMM dd, yyyy 'at' h:mm a", Locale.getDefault())
+        val sdf = SimpleDateFormat("MM/dd/yyyy 'at' h:mm a", Locale.getDefault())
         return sdf.format(Date(timestamp))
     }
 }

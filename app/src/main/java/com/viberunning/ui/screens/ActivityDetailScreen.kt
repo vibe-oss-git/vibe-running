@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.viberunning.ui.components.SpeedMapView
 import com.viberunning.ui.components.StatsCard
 import com.viberunning.util.FormatUtils
 import com.viberunning.util.KmlExporter
@@ -108,12 +109,29 @@ fun ActivityDetailScreen(
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
+                // Date header with day of week
                 Text(
-                    text = FormatUtils.formatDateTime(act.startTime),
+                    text = "${FormatUtils.formatDayOfWeek(act.startTime)}, ${FormatUtils.formatDate(act.startTime)}",
                     style = MaterialTheme.typography.titleLarge
                 )
+                val endTimeText = act.endTime?.let { FormatUtils.formatTime(it) } ?: "—"
+                Text(
+                    text = "${FormatUtils.formatTime(act.startTime)} – $endTimeText",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Speed map
+                SpeedMapView(
+                    points = points,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Main stats
                 Row(

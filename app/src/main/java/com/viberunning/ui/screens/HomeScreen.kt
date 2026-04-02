@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.GpsNotFixed
+import androidx.compose.material.icons.filled.GpsOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -29,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,10 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.viberunning.ui.components.StatsCard
 import com.viberunning.util.FormatUtils
+import com.viberunning.util.GpsStatusMonitor
 import com.viberunning.viewmodel.TrackingViewModel
 
 @Composable
@@ -51,7 +57,20 @@ fun HomeScreen(
     val isTracking by viewModel.isTracking.collectAsState()
     val state by viewModel.trackingState.collectAsState()
     val activityId by viewModel.currentActivityId.collectAsState()
+    val gpsSignal by viewModel.gpsSignal.collectAsState()
     var showStopConfirmation by remember { mutableStateOf(false) }
+
+    // Start/stop GPS monitoring when not tracking
+    DisposableEffect(isTracking) {
+        if (!isTracking) {
+            viewModel.startGpsMonitoring()
+        }
+        onDispose {
+            if (!isTracking) {
+                viewModel.stopGpsMonitoring()
+            }
+        }
+    }
 
     if (showStopConfirmation) {
         // Full-screen stop confirmation
@@ -162,7 +181,13 @@ fun HomeScreen(
             color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // GPS status indicator (only when not tracking)
+        if (!isTracking) {
+            GpsStatusBanner(gpsSignal)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Duration - big center display
         Text(
@@ -226,20 +251,25 @@ fun HomeScreen(
 
         // Controls — large buttons filling available width
         if (!isTracking) {
+            val gpsReady = gpsSignal == GpsStatusMonitor.GpsSignal.READY
             Button(
                 onClick = { viewModel.startActivity() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
                 shape = CircleShape,
+                enabled = gpsReady,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 )
             ) {
                 Text(
-                    text = "START",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    text = if (gpsReady) "START" else "Waiting for GPS...",
+                    style = if (gpsReady) MaterialTheme.typography.displayLarge
+                            else MaterialTheme.typography.headlineMedium,
+                    color = if (gpsReady) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
         } else {
@@ -306,5 +336,42 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun GpsStatusBanner(signal: GpsStatusMonitor.GpsSignal) {
+    val (icon, text, color) = when (signal) {
+        GpsStatusMonitor.GpsSignal.UNAVAILABLE -> Triple(
+            Icons.Default.GpsOff, "GPS Unavailable", MaterialTheme.colorScheme.error
+        )
+        GpsStatusMonitor.GpsSignal.SEARCHING -> Triple(
+            Icons.Default.GpsNotFixed, "Searching for GPS...", MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        GpsStatusMonitor.GpsSignal.WEAK -> Triple(
+            Icons.Default.GpsNotFixed, "Weak GPS Signal", Color(0xFFFF9800)
+        )
+        GpsStatusMonitor.GpsSignal.READY -> Triple(
+            Icons.Default.GpsFixed, "GPS Ready", MaterialTheme.colorScheme.primary
+        )
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = text,
+            tint = color,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = color
+        )
     }
 }

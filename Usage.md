@@ -19,10 +19,20 @@ Vibe Running is completely offline. It never connects to the internet. All your 
 
 ## Tracking a Run
 
+### GPS Signal
+Before you can start, the app must acquire a GPS signal. A status indicator at the top of the Run tab shows the current state:
+- **GPS Unavailable** — GPS is disabled on your device. Enable it in system settings.
+- **Searching for GPS...** — the app is acquiring satellites. Wait for a fix.
+- **Weak GPS Signal** — a fix is acquired but accuracy is poor. You can wait for it to improve.
+- **GPS Ready** — signal is strong. The START button becomes active.
+
+The START button is disabled until GPS reaches the "Ready" state.
+
 ### Starting
 1. Open the app — you land on the **Run** tab.
-2. Tap the large green **START** button in the center of the screen.
-3. A notification appears confirming tracking is active. You can now lock your screen or switch apps — tracking continues in the background.
+2. Wait for the GPS status to show **GPS Ready**.
+3. Tap the large green **START** button.
+4. A notification appears confirming tracking is active. You can now lock your screen or switch apps — tracking continues in the background.
 
 ### During a Run
 The screen displays real-time stats:
@@ -33,29 +43,37 @@ The screen displays real-time stats:
 - **Max Speed** — fastest speed recorded so far
 
 ### Pausing and Resuming
-Tap the large **Pause** button (left circle) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused. Tap the **Play** button to resume.
+Tap the large **PAUSE** button (left side) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused. Tap **RESUME** to continue.
 
 ### Stopping
-Tap the large red **STOP** button (right side). A confirmation dialog appears showing your distance and duration. Choose:
-- **Stop & Save** — ends the run and saves it to your history. You are taken to the activity detail screen.
-- **Keep Going** — dismisses the dialog and continues tracking.
-- **Stop Without Saving** — stops tracking and permanently discards the activity. The run will not appear in your history or stats.
+Tap the large red **STOP** button (right side). A full-screen confirmation appears with three options, spread vertically:
+- **Stop Without Saving** (top) — stops tracking and permanently discards the activity.
+- **Keep Going** (middle) — dismisses and continues tracking.
+- **Stop & Save** (bottom) — ends the run, saves it, and opens the activity detail screen with the speed map.
 
 ---
 
 ## Viewing History
 
 Tap the **History** tab in the bottom navigation bar. All completed runs are listed newest-first, showing:
-- Date and start time
+- Date in **MM/DD/YYYY** format and the day of the week
+- Start and end times
 - Distance, duration, and average pace
 
-Tap any run to open its detail screen.
+Tap any run to open its speed map and detail screen.
 
 ---
 
-## Activity Details
+## Activity Details & Speed Map
 
-The detail screen shows full stats for a completed run:
+The detail screen opens with a **speed map** at the top — a plotted route of your run colored by speed:
+- **Blue** segments = slowest
+- **Green/Yellow** segments = moderate
+- **Orange/Red** segments = fastest
+- A **green dot** marks the start and a **red dot** marks the finish
+- A gradient legend below the map shows the speed range in **mph to 2 decimal places**
+
+Below the map, full stats are shown:
 - Distance, duration
 - Average pace, average speed
 - Max speed
