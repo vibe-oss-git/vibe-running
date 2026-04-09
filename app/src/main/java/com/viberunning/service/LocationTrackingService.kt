@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class LocationTrackingService : Service() {
 
@@ -48,6 +49,7 @@ class LocationTrackingService : Service() {
     private var pausedDuration = 0L
     private var pauseStartTime = 0L
     private var isPaused = false
+    private var lastSaveTime = 0L
 
     private val _trackingState = MutableStateFlow(TrackingState())
     val trackingState: StateFlow<TrackingState> = _trackingState.asStateFlow()
@@ -93,8 +95,52 @@ class LocationTrackingService : Service() {
             ACTION_PAUSE -> pauseTracking()
             ACTION_RESUME -> resumeTracking()
             ACTION_STOP -> stopTracking()
+            else -> {
+                // Service restarted by system (START_STICKY) — try to recover
+                if (!_isTracking.value) {
+                    recoverInProgressActivity()
+                }
+            }
         }
         return START_STICKY
+    }
+
+    private fun recoverInProgressActivity() {
+        serviceScope.launch {
+            val app = application as VibeRunningApp
+            val activity = app.repository.getInProgressActivity() ?: run {
+                stopSelf()
+                return@launch
+            }
+
+            // Recover state from the saved activity row
+            currentActivityId = activity.id
+            totalDistanceMeters = activity.distanceMeters
+            maxSpeedMps = activity.maxSpeedMps
+            trackingStartTime = activity.startTime
+            // Estimate paused duration from saved duration vs wall clock
+            val wallElapsed = System.currentTimeMillis() - activity.startTime
+            pausedDuration = if (activity.durationMillis > 0) {
+                wallElapsed - activity.durationMillis
+            } else 0L
+            isPaused = false
+            lastLocation = null
+            _isTracking.value = true
+
+            val notification = buildNotification("Resuming...", "Recovering activity")
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+
+            startLocationUpdates()
+
+            // Duration ticker
+            launch {
+                while (_isTracking.value) {
+                    updateState()
+                    periodicSave()
+                    kotlinx.coroutines.delay(1000)
+                }
+            }
+        }
     }
 
     @Suppress("MissingPermission")
@@ -106,11 +152,26 @@ class LocationTrackingService : Service() {
         trackingStartTime = System.currentTimeMillis()
         pausedDuration = 0L
         isPaused = false
+        lastSaveTime = System.currentTimeMillis()
         _isTracking.value = true
 
         val notification = buildNotification("00:00", "Starting activity...")
         startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
 
+        startLocationUpdates()
+
+        // Duration ticker
+        serviceScope.launch {
+            while (_isTracking.value) {
+                updateState()
+                periodicSave()
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
+
+    @Suppress("MissingPermission")
+    private fun startLocationUpdates() {
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             GPS_INTERVAL_MS
@@ -124,14 +185,6 @@ class LocationTrackingService : Service() {
             locationCallback,
             Looper.getMainLooper()
         )
-
-        // Duration ticker
-        serviceScope.launch {
-            while (_isTracking.value) {
-                updateState()
-                kotlinx.coroutines.delay(1000)
-            }
-        }
     }
 
     private fun processLocation(location: Location) {
@@ -206,6 +259,52 @@ class LocationTrackingService : Service() {
         updateNotification(elapsed.coerceAtLeast(0))
     }
 
+    private fun periodicSave() {
+        val now = System.currentTimeMillis()
+        if (now - lastSaveTime >= SAVE_INTERVAL_MS) {
+            lastSaveTime = now
+            saveCurrentState()
+        }
+    }
+
+    private fun saveCurrentState() {
+        if (currentActivityId == -1L) return
+        val state = _trackingState.value
+        serviceScope.launch {
+            val app = application as VibeRunningApp
+            val activity = app.repository.getActivity(currentActivityId) ?: return@launch
+            app.repository.updateActivity(
+                activity.copy(
+                    distanceMeters = state.distanceMeters,
+                    durationMillis = state.durationMillis,
+                    maxSpeedMps = state.maxSpeedMps,
+                    avgSpeedMps = state.avgSpeedMps
+                )
+            )
+        }
+    }
+
+    private fun saveCurrentStateBlocking() {
+        if (currentActivityId == -1L) return
+        val state = _trackingState.value
+        try {
+            runBlocking {
+                val app = application as VibeRunningApp
+                val activity = app.repository.getActivity(currentActivityId) ?: return@runBlocking
+                app.repository.updateActivity(
+                    activity.copy(
+                        distanceMeters = state.distanceMeters,
+                        durationMillis = state.durationMillis,
+                        maxSpeedMps = state.maxSpeedMps,
+                        avgSpeedMps = state.avgSpeedMps
+                    )
+                )
+            }
+        } catch (_: Exception) {
+            // Best-effort save during shutdown
+        }
+    }
+
     private fun pauseTracking() {
         isPaused = true
         pauseStartTime = System.currentTimeMillis()
@@ -265,6 +364,24 @@ class LocationTrackingService : Service() {
         stopSelf()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // App swiped from recents — save progress so it's not lost
+        if (_isTracking.value) {
+            saveCurrentStateBlocking()
+        }
+    }
+
+    override fun onDestroy() {
+        // Rescue save if still tracking when the OS kills us
+        if (_isTracking.value) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+            saveCurrentStateBlocking()
+        }
+        serviceScope.cancel()
+        super.onDestroy()
+    }
+
     private fun buildNotification(duration: String, detail: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -304,11 +421,6 @@ class LocationTrackingService : Service() {
         manager.notify(NOTIFICATION_ID, notification)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceScope.cancel()
-    }
-
     companion object {
         const val ACTION_START = "ACTION_START"
         const val ACTION_PAUSE = "ACTION_PAUSE"
@@ -323,5 +435,6 @@ class LocationTrackingService : Service() {
         private const val MAX_ACCURACY_METERS = 30f
         private const val MAX_SINGLE_DISTANCE_METERS = 100.0
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
+        private const val SAVE_INTERVAL_MS = 30_000L
     }
 }

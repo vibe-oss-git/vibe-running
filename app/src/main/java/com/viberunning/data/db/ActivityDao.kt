@@ -55,4 +55,7 @@ interface ActivityDao {
 
     @Query("SELECT SUM(caloriesBurned) FROM activities WHERE status = 'completed'")
     fun observeTotalCalories(): Flow<Int?>
+
+    @Query("SELECT * FROM activities WHERE status = 'in_progress' ORDER BY startTime DESC LIMIT 1")
+    suspend fun getInProgress(): Activity?
 }

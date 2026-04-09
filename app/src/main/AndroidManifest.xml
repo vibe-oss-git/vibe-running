@@ -30,6 +30,7 @@
         <service
             android:name=".service.LocationTrackingService"
             android:foregroundServiceType="location"
+            android:stopWithTask="false"
             android:exported="false" />
 
         <provider

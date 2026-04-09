@@ -32,7 +32,7 @@ The START button is disabled until GPS reaches the "Ready" state.
 1. Open the app — you land on the **Run** tab.
 2. Wait for the GPS status to show **GPS Ready**.
 3. Tap the large green **START** button.
-4. A persistent notification appears showing the running timer, distance, pace, and speed. You can now lock your screen or switch apps — tracking continues in the background. The notification updates every second.
+4. A persistent notification appears showing the running timer, distance, pace, and speed. You can now lock your screen or switch apps — tracking continues in the background. The notification updates every second. Your progress is saved to the database every 30 seconds, so even if the system kills the app under memory pressure, at most 30 seconds of data is lost. If the app is swiped from recents, the tracking service continues running independently. If the system kills the service, it automatically restarts and resumes tracking. When you reopen the app, it reconnects to the running service and displays your live stats.
 
 ### During a Run
 The screen displays real-time stats:

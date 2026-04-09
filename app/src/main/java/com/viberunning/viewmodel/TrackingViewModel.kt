@@ -36,6 +36,22 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
     private val _currentActivityId = MutableStateFlow(-1L)
     val currentActivityId: StateFlow<Long> = _currentActivityId.asStateFlow()
 
+    init {
+        // Check for an in-progress activity and reconnect to the running service
+        viewModelScope.launch {
+            val inProgress = repository.getInProgressActivity()
+            if (inProgress != null) {
+                _currentActivityId.value = inProgress.id
+                val context = getApplication<VibeRunningApp>()
+                context.bindService(
+                    Intent(context, LocationTrackingService::class.java),
+                    serviceConnection,
+                    Context.BIND_AUTO_CREATE
+                )
+            }
+        }
+    }
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as LocationTrackingService.TrackingBinder).getService()
@@ -45,6 +61,9 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
             viewModelScope.launch {
                 service.trackingState.collect { state ->
                     _trackingState.value = state
+                    if (state.activityId != -1L) {
+                        _currentActivityId.value = state.activityId
+                    }
                 }
             }
             viewModelScope.launch {

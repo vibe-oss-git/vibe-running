@@ -34,6 +34,8 @@ class ActivityRepository(
     fun observeLocationPoints(activityId: Long): Flow<List<LocationPoint>> =
         locationPointDao.observeByActivityId(activityId)
 
+    suspend fun getInProgressActivity(): Activity? = activityDao.getInProgress()
+
     // Stats
     fun observeTopSpeed(): Flow<Double?> = activityDao.observeTopSpeed()
     fun observeLongestDistance(): Flow<Double?> = activityDao.observeLongestDistance()
