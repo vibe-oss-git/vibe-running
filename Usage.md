@@ -32,7 +32,7 @@ The START button is disabled until GPS reaches the "Ready" state.
 1. Open the app — you land on the **Run** tab.
 2. Wait for the GPS status to show **GPS Ready**.
 3. Tap the large green **START** button.
-4. A notification appears confirming tracking is active. You can now lock your screen or switch apps — tracking continues in the background.
+4. A persistent notification appears showing the running timer, distance, pace, and speed. You can now lock your screen or switch apps — tracking continues in the background. The notification updates every second.
 
 ### During a Run
 The screen displays real-time stats:
@@ -66,12 +66,26 @@ Tap any run to open its speed map and detail screen.
 
 ## Activity Details & Speed Map
 
-The detail screen opens with a **speed map** at the top — a plotted route of your run colored by speed:
+The detail screen opens with an interactive **speed map** at the top — a plotted route of your run colored by speed:
 - **Blue** segments = slowest
 - **Green/Yellow** segments = moderate
 - **Orange/Red** segments = fastest
 - A **green dot** marks the start and a **red dot** marks the finish
 - A gradient legend below the map shows the speed range in **mph to 2 decimal places**
+
+### Zooming and Panning
+- **Pinch** to zoom into the map and inspect specific sections of your route
+- **Drag** to pan around while zoomed in
+- **Double-tap** to reset the view to the original zoom level
+
+### Adjusting the Speed Range
+Below the map is a **range slider** that controls which speeds are displayed:
+- Drag the **left handle** to raise the minimum speed — segments slower than this become hidden (gaps in the route)
+- Drag the **right handle** to lower the maximum speed — segments faster than this become hidden
+- The full color gradient always maps to the selected range, giving you finer detail in the range you care about
+- Tap **Reset** to restore the original range
+
+For example, if your run shows speeds from 3.00 to 8.00 mph and you set the range to 5.00–8.00, only the portions where you ran at least 5 mph will be visible, with the full blue-to-red gradient spread across that 5–8 mph range.
 
 Below the map, full stats are shown:
 - Distance, duration

@@ -107,7 +107,7 @@ class LocationTrackingService : Service() {
         isPaused = false
         _isTracking.value = true
 
-        val notification = buildNotification("Tracking activity...")
+        val notification = buildNotification("00:00", "Starting activity...")
         startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
 
         val locationRequest = LocationRequest.Builder(
@@ -254,7 +254,7 @@ class LocationTrackingService : Service() {
         stopSelf()
     }
 
-    private fun buildNotification(text: String): Notification {
+    private fun buildNotification(duration: String, detail: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
@@ -262,8 +262,13 @@ class LocationTrackingService : Service() {
         )
 
         return NotificationCompat.Builder(this, VibeRunningApp.TRACKING_CHANNEL_ID)
-            .setContentTitle("Vibe Running")
-            .setContentText(text)
+            .setContentTitle(duration)
+            .setContentText(detail)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(duration)
+                    .bigText(detail)
+            )
             .setSmallIcon(R.drawable.ic_run)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -274,10 +279,16 @@ class LocationTrackingService : Service() {
     private fun updateNotification(elapsedMillis: Long) {
         val distance = FormatUtils.formatDistance(totalDistanceMeters, useImperial = true)
         val duration = FormatUtils.formatDuration(elapsedMillis)
-        val status = if (isPaused) " (Paused)" else ""
-        val text = "$distance | $duration$status"
+        val pace = FormatUtils.formatPace(
+            if (elapsedMillis > 0) totalDistanceMeters / (elapsedMillis / 1000.0) else 0.0,
+            useImperial = true
+        )
+        val speed = FormatUtils.formatSpeed(lastLocation?.speed?.toDouble() ?: 0.0, useImperial = true)
+        val status = if (isPaused) " (PAUSED)" else ""
+        val title = "$duration$status"
+        val detail = "$distance  |  Pace: $pace  |  Speed: $speed"
 
-        val notification = buildNotification(text)
+        val notification = buildNotification(title, detail)
         val manager = getSystemService(android.app.NotificationManager::class.java)
         manager.notify(NOTIFICATION_ID, notification)
     }
@@ -295,8 +306,8 @@ class LocationTrackingService : Service() {
         const val EXTRA_ACTIVITY_ID = "EXTRA_ACTIVITY_ID"
         const val NOTIFICATION_ID = 1
 
-        private const val GPS_INTERVAL_MS = 3000L
-        private const val GPS_FASTEST_INTERVAL_MS = 1000L
+        private const val GPS_INTERVAL_MS = 2100L
+        private const val GPS_FASTEST_INTERVAL_MS = 700L
         private const val MIN_DISTANCE_METERS = 2f
         private const val MAX_ACCURACY_METERS = 30f
         private const val MAX_SINGLE_DISTANCE_METERS = 100.0
