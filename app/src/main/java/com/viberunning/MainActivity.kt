@@ -15,8 +15,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,11 +30,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.viberunning.ui.components.WeightPromptDialog
 import com.viberunning.ui.navigation.Screen
 import com.viberunning.ui.navigation.bottomNavItems
 import com.viberunning.ui.screens.ActivityDetailScreen
 import com.viberunning.ui.screens.HistoryScreen
 import com.viberunning.ui.screens.HomeScreen
+import com.viberunning.ui.screens.ProfileScreen
 import com.viberunning.ui.screens.StatsScreen
 import com.viberunning.ui.theme.VibeRunningTheme
 import com.viberunning.viewmodel.HistoryViewModel
@@ -83,7 +87,39 @@ fun VibeRunningNavHost() {
     val statsViewModel: StatsViewModel = viewModel()
 
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as VibeRunningApp
-    var useImperial by rememberSaveable { mutableStateOf(app.preferencesManager.useImperial) }
+    val prefs = app.preferencesManager
+    var useImperial by rememberSaveable { mutableStateOf(prefs.useImperial) }
+
+    // Weight prompt state
+    var showWeightPrompt by remember { mutableStateOf(false) }
+    var weightPromptHandled by remember { mutableStateOf(false) }
+
+    // On first composition, check if we need profile setup or weight prompt
+    LaunchedEffect(Unit) {
+        if (!prefs.hasProfile) {
+            navController.navigate(Screen.Profile.route) {
+                popUpTo(Screen.Home.route) { inclusive = true }
+            }
+        } else if (prefs.isWeightStale && !weightPromptHandled) {
+            showWeightPrompt = true
+        }
+    }
+
+    // Weight prompt dialog
+    if (showWeightPrompt) {
+        WeightPromptDialog(
+            preferencesManager = prefs,
+            useImperial = useImperial,
+            onDismiss = {
+                showWeightPrompt = false
+                weightPromptHandled = true
+            },
+            onSave = {
+                showWeightPrompt = false
+                weightPromptHandled = true
+            }
+        )
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -142,6 +178,23 @@ fun VibeRunningNavHost() {
                 StatsScreen(
                     viewModel = statsViewModel,
                     useImperial = useImperial
+                )
+            }
+
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    preferencesManager = prefs,
+                    useImperial = useImperial,
+                    onProfileSaved = {
+                        if (navController.previousBackStackEntry == null) {
+                            // First-launch: navigate to Home
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Profile.route) { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
+                        }
+                    }
                 )
             }
 

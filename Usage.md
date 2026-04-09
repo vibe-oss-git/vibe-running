@@ -124,8 +124,48 @@ Tap the **Stats** tab to see your all-time records and totals.
 - Total distance across all runs
 - Total time spent running
 - Average distance per run
+- Total calories burned
+- Average calories per run
 
-Stats update automatically as you complete more runs.
+Stats update automatically as you complete more runs. Deleting an activity updates all stats and records accordingly.
+
+---
+
+## Profile
+
+Tap the **Profile** tab in the bottom navigation bar to manage your height, weight, and BMI.
+
+### First Launch
+On first launch, the app takes you directly to the Profile screen. You must enter your height and weight before you can start tracking — this data is needed to estimate calories burned.
+
+### Height & Weight
+- Enter your height in feet/inches (imperial) or centimeters (metric)
+- Enter your weight in pounds (imperial) or kilograms (metric)
+- All values are stored locally on your device
+
+### BMI
+Once your profile is saved, the screen displays your current **BMI** (Body Mass Index) with a category label (Underweight, Normal, Overweight, Obese). BMI is calculated as (weight × 703) / height² using imperial units. Note that BMI is a general indicator and does not account for muscle mass or body composition.
+
+### Weight Updates
+Every **14 days**, the app prompts you to update your weight. Keeping this current improves the accuracy of calorie estimates. You can also update your weight at any time from the Profile tab.
+
+---
+
+## Calorie Tracking
+
+Each completed activity includes an estimated calorie count based on:
+- Your current weight
+- The average speed of the activity
+- The duration of the activity
+
+The estimation uses the **MET method** (Metabolic Equivalent of Task) with values from the Compendium of Physical Activities. MET values are interpolated based on your running speed — faster running burns more calories per minute.
+
+Calories appear in:
+- **History** cards — shown next to the time range
+- **Activity Detail** — displayed in the stats grid
+- **Stats** tab — total and average calories in lifetime totals
+
+For the most accurate estimates, keep your weight up to date in the Profile tab.
 
 ---
 

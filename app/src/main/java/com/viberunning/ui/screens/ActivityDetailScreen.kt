@@ -180,6 +180,19 @@ fun ActivityDetailScreen(
                         modifier = Modifier.weight(1f)
                     )
                     StatsCard(
+                        label = "Calories",
+                        value = if (act.caloriesBurned > 0) "%,d kcal".format(act.caloriesBurned) else "—",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatsCard(
                         label = "GPS Points",
                         value = "${points.size}",
                         modifier = Modifier.weight(1f)

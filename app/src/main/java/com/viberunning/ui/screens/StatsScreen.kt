@@ -36,6 +36,7 @@ fun StatsScreen(
     val totalActivities by viewModel.totalActivities.collectAsState()
     val totalDistance by viewModel.totalDistance.collectAsState()
     val totalDuration by viewModel.totalDuration.collectAsState()
+    val totalCalories by viewModel.totalCalories.collectAsState()
 
     Column(
         modifier = Modifier
@@ -148,6 +149,26 @@ fun StatsScreen(
                     label = "Avg Distance",
                     value = if (totalActivities > 0 && totalDistance != null) {
                         FormatUtils.formatDistance(totalDistance!! / totalActivities, useImperial)
+                    } else "--",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatsCard(
+                    label = "Total Calories",
+                    value = totalCalories?.let { "%,d kcal".format(it) } ?: "--",
+                    modifier = Modifier.weight(1f)
+                )
+                StatsCard(
+                    label = "Avg Calories",
+                    value = if (totalActivities > 0 && totalCalories != null) {
+                        "%,d kcal".format(totalCalories!! / totalActivities)
                     } else "--",
                     modifier = Modifier.weight(1f)
                 )

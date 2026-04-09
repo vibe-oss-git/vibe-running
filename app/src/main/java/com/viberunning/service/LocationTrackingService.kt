@@ -21,6 +21,7 @@ import com.viberunning.R
 import com.viberunning.VibeRunningApp
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
+import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.FormatUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -235,6 +236,8 @@ class LocationTrackingService : Service() {
 
         serviceScope.launch {
             val app = application as VibeRunningApp
+            val weightLbs = app.preferencesManager.weightLbs
+            val calories = CalorieEstimator.estimate(avgSpeed, elapsed, weightLbs)
             val activity = app.repository.getActivity(currentActivityId)
             activity?.let {
                 app.repository.updateActivity(
@@ -244,6 +247,7 @@ class LocationTrackingService : Service() {
                         durationMillis = elapsed,
                         maxSpeedMps = maxSpeedMps,
                         avgSpeedMps = avgSpeed,
+                        caloriesBurned = calories,
                         status = Activity.STATUS_COMPLETED
                     )
                 )

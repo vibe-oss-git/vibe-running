@@ -104,13 +104,25 @@ private fun ActivityCard(
                 )
             }
 
-            // Start and end times
+            // Start and end times + calories
             val endTimeText = activity.endTime?.let { FormatUtils.formatTime(it) } ?: "—"
-            Text(
-                text = "${FormatUtils.formatTime(activity.startTime)} – $endTimeText",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${FormatUtils.formatTime(activity.startTime)} – $endTimeText",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (activity.caloriesBurned > 0) {
+                    Text(
+                        text = "%,d kcal".format(activity.caloriesBurned),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

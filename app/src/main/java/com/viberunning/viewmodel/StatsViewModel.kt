@@ -33,4 +33,7 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
     val totalDuration: StateFlow<Long?> = repository.observeTotalDuration()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val totalCalories: StateFlow<Int?> = repository.observeTotalCalories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 }

@@ -52,4 +52,7 @@ interface ActivityDao {
 
     @Query("SELECT SUM(durationMillis) FROM activities WHERE status = 'completed'")
     fun observeTotalDuration(): Flow<Long?>
+
+    @Query("SELECT SUM(caloriesBurned) FROM activities WHERE status = 'completed'")
+    fun observeTotalCalories(): Flow<Int?>
 }

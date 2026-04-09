@@ -42,4 +42,5 @@ class ActivityRepository(
     fun observeTotalActivities(): Flow<Int> = activityDao.observeTotalActivities()
     fun observeTotalDistance(): Flow<Double?> = activityDao.observeTotalDistance()
     fun observeTotalDuration(): Flow<Long?> = activityDao.observeTotalDuration()
+    fun observeTotalCalories(): Flow<Int?> = activityDao.observeTotalCalories()
 }

@@ -12,6 +12,7 @@ data class Activity(
     val durationMillis: Long = 0,
     val maxSpeedMps: Double = 0.0,
     val avgSpeedMps: Double = 0.0,
+    val caloriesBurned: Int = 0,
     val status: String = STATUS_IN_PROGRESS
 ) {
     companion object {
