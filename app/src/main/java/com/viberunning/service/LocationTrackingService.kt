@@ -236,8 +236,15 @@ class LocationTrackingService : Service() {
 
         serviceScope.launch {
             val app = application as VibeRunningApp
-            val weightLbs = app.preferencesManager.weightLbs
-            val calories = CalorieEstimator.estimate(avgSpeed, elapsed, weightLbs)
+            val prefs = app.preferencesManager
+            val calories = CalorieEstimator.estimate(
+                avgSpeedMps = avgSpeed,
+                durationMillis = elapsed,
+                weightLbs = prefs.weightLbs,
+                heightInches = prefs.heightInches,
+                ageYears = prefs.ageYears,
+                isMale = prefs.sex == "male"
+            )
             val activity = app.repository.getActivity(currentActivityId)
             activity?.let {
                 app.repository.updateActivity(

@@ -1,7 +1,14 @@
 package com.viberunning.util
 
 /**
- * Estimates calories burned during running using MET (Metabolic Equivalent of Task).
+ * Estimates calories burned during running using MET (Metabolic Equivalent of Task)
+ * applied against a personalized BMR from the Mifflin-St Jeor equation.
+ *
+ * Mifflin-St Jeor BMR:
+ *   Male:   10 × weightKg + 6.25 × heightCm - 5 × age + 5
+ *   Female: 10 × weightKg + 6.25 × heightCm - 5 × age - 161
+ *
+ * Calories = MET × (BMR / 24) × durationHours
  *
  * MET values based on the Compendium of Physical Activities (Ainsworth et al.):
  * - Walking 2.0 mph: 2.8 MET
@@ -13,27 +20,35 @@ package com.viberunning.util
  * - Running 8.0 mph: 11.8 MET
  * - Running 9.0 mph: 12.8 MET
  * - Running 10.0 mph: 14.5 MET
- *
- * Formula: Calories = MET × weightKg × durationHours
  */
 object CalorieEstimator {
 
     /**
-     * Estimate calories burned for an activity.
+     * Estimate calories burned for an activity using Mifflin-St Jeor BMR.
      * @param avgSpeedMps average speed in meters per second
      * @param durationMillis duration in milliseconds
      * @param weightLbs weight in pounds
+     * @param heightInches height in inches
+     * @param ageYears age in years
+     * @param isMale true for male, false for female
      * @return estimated calories burned
      */
-    fun estimate(avgSpeedMps: Double, durationMillis: Long, weightLbs: Float): Int {
+    fun estimate(
+        avgSpeedMps: Double,
+        durationMillis: Long,
+        weightLbs: Float,
+        heightInches: Float,
+        ageYears: Int,
+        isMale: Boolean
+    ): Int {
         if (avgSpeedMps <= 0.0 || durationMillis <= 0 || weightLbs <= 0f) return 0
 
         val speedMph = avgSpeedMps * 2.23694
         val met = speedToMet(speedMph)
-        val weightKg = weightLbs * 0.453592
+        val bmrPerHour = calcBmrPerHour(weightLbs, heightInches, ageYears, isMale)
         val durationHours = durationMillis / 3_600_000.0
 
-        return (met * weightKg * durationHours).toInt()
+        return (met * bmrPerHour * durationHours).toInt()
     }
 
     /**
@@ -41,17 +56,54 @@ object CalorieEstimator {
      * @param currentSpeedMps current speed in meters per second
      * @param intervalMillis time interval in milliseconds
      * @param weightLbs weight in pounds
+     * @param heightInches height in inches
+     * @param ageYears age in years
+     * @param isMale true for male, false for female
      * @return estimated calories burned in this interval
      */
-    fun estimateInterval(currentSpeedMps: Double, intervalMillis: Long, weightLbs: Float): Double {
+    fun estimateInterval(
+        currentSpeedMps: Double,
+        intervalMillis: Long,
+        weightLbs: Float,
+        heightInches: Float,
+        ageYears: Int,
+        isMale: Boolean
+    ): Double {
         if (currentSpeedMps <= 0.0 || intervalMillis <= 0 || weightLbs <= 0f) return 0.0
 
         val speedMph = currentSpeedMps * 2.23694
         val met = speedToMet(speedMph)
-        val weightKg = weightLbs * 0.453592
+        val bmrPerHour = calcBmrPerHour(weightLbs, heightInches, ageYears, isMale)
         val durationHours = intervalMillis / 3_600_000.0
 
-        return met * weightKg * durationHours
+        return met * bmrPerHour * durationHours
+    }
+
+    /**
+     * Calculate hourly BMR using Mifflin-St Jeor equation.
+     * Falls back to generic 1 kcal/kg/hr if height or age is missing.
+     */
+    private fun calcBmrPerHour(
+        weightLbs: Float,
+        heightInches: Float,
+        ageYears: Int,
+        isMale: Boolean
+    ): Double {
+        val weightKg = weightLbs * 0.453592
+        val heightCm = heightInches * 2.54
+
+        if (heightCm <= 0 || ageYears <= 0) {
+            // Fallback to generic MET assumption
+            return weightKg
+        }
+
+        val bmrDaily = if (isMale) {
+            10.0 * weightKg + 6.25 * heightCm - 5.0 * ageYears + 5.0
+        } else {
+            10.0 * weightKg + 6.25 * heightCm - 5.0 * ageYears - 161.0
+        }
+
+        return bmrDaily / 24.0
     }
 
     /**

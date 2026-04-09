@@ -133,10 +133,16 @@ Stats update automatically as you complete more runs. Deleting an activity updat
 
 ## Profile
 
-Tap the **Profile** tab in the bottom navigation bar to manage your height, weight, and BMI.
+Tap the **Profile** tab in the bottom navigation bar to manage your personal data.
 
 ### First Launch
-On first launch, the app takes you directly to the Profile screen. You must enter your height and weight before you can start tracking — this data is needed to estimate calories burned.
+On first launch, the app takes you directly to the Profile screen. You must complete all fields (sex, date of birth, height, and weight) before you can start tracking — this data is needed to estimate calories burned accurately.
+
+### Sex
+Select **Male** or **Female**. This is used in the Mifflin-St Jeor equation to calculate your Basal Metabolic Rate (BMR), which affects calorie estimation. Males and females of the same weight burn calories at different rates.
+
+### Date of Birth
+Tap the date picker to select your date of birth. Age is used in the BMR calculation — metabolic rate decreases with age. The picker does not allow future dates.
 
 ### Height & Weight
 - Enter your height in feet/inches (imperial) or centimeters (metric)
@@ -154,18 +160,24 @@ Every **14 days**, the app prompts you to update your weight. Keeping this curre
 ## Calorie Tracking
 
 Each completed activity includes an estimated calorie count based on:
-- Your current weight
-- The average speed of the activity
+- Your sex, age, height, and weight (via the **Mifflin-St Jeor BMR** equation)
+- The average speed of the activity (via **MET** values from the Compendium of Physical Activities)
 - The duration of the activity
 
-The estimation uses the **MET method** (Metabolic Equivalent of Task) with values from the Compendium of Physical Activities. MET values are interpolated based on your running speed — faster running burns more calories per minute.
+The formula is: **Calories = MET × (BMR / 24) × duration in hours**
+
+The Mifflin-St Jeor equation calculates your Basal Metabolic Rate differently for males and females:
+- **Male:** BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age + 5
+- **Female:** BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age - 161
+
+MET values are interpolated based on your running speed — faster running burns more calories per minute.
 
 Calories appear in:
 - **History** cards — shown next to the time range
 - **Activity Detail** — displayed in the stats grid
 - **Stats** tab — total and average calories in lifetime totals
 
-For the most accurate estimates, keep your weight up to date in the Profile tab.
+For the most accurate estimates, keep your weight and date of birth up to date in the Profile tab.
 
 ---
 
