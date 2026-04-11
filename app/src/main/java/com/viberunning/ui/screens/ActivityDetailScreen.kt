@@ -123,12 +123,10 @@ fun ActivityDetailScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Speed map
+                // Speed map — larger by default; tap to enlarge further for pinch-zoom
                 SpeedMapView(
                     points = points,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

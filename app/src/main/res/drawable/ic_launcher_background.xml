@@ -4,7 +4,14 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Lower (green) half -->
     <path
         android:fillColor="#1B5E20"
         android:pathData="M0,0h108v108H0z"/>
+    <!-- Upper (blue) half, split by a diagonal ~10° off horizontal:
+         starts at (0,64) on the left (below center) and ends at (108,44) on the
+         right (above center), so the line rises ~10.5° from left to right. -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M0,0 L108,0 L108,44 L0,64 Z"/>
 </vector>

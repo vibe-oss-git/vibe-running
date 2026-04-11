@@ -45,6 +45,9 @@ The screen displays real-time stats:
 ### Pausing and Resuming
 Tap the large **PAUSE** button (left side) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused. Tap **RESUME** to continue.
 
+### Automatic Inactivity Pause
+If you stop moving for **1 minute** (e.g., you stop to wait at a crosswalk, or you forget to stop the app), tracking automatically pauses and your progress is saved. If you start moving again, tracking resumes automatically. If you remain stationary for another minute (**2 minutes total** of no movement), the app finalizes the activity, stops the tracking service, and exits, so you don't burn battery if you forgot to stop.
+
 ### Stopping
 Tap the large red **STOP** button (right side). A full-screen confirmation appears with three options, spread vertically:
 - **Stop Without Saving** (top) — stops tracking and permanently discards the activity.
@@ -74,18 +77,22 @@ The detail screen opens with an interactive **speed map** at the top — a plott
 - A gradient legend below the map shows the speed range in **mph to 2 decimal places**
 
 ### Zooming and Panning
-- **Pinch** to zoom into the map and inspect specific sections of your route
-- **Drag** to pan around while zoomed in
-- **Double-tap** to reset the view to the original zoom level
+- **Tap** the map once to enlarge it — this unlocks zoom/pan gestures
+- **Pinch** (while enlarged) to zoom into the map and inspect specific sections of your route
+- **Drag** (while enlarged and zoomed) to pan around
+- **Double-tap** (while enlarged) to reset the view to the original zoom level
+- **Tap** the map again (while enlarged but not zoomed) to shrink it back to its default size
+
+The route is rendered in a square drawing area that preserves true aspect ratio — it is never stretched or squashed to fit the container.
 
 ### Adjusting the Speed Range
 Below the map is a **range slider** that controls which speeds are displayed:
 - Drag the **left handle** to raise the minimum speed — segments slower than this become hidden (gaps in the route)
 - Drag the **right handle** to lower the maximum speed — segments faster than this become hidden
-- The full color gradient always maps to the selected range, giving you finer detail in the range you care about
+- The color scale is **absolute** — colors always map to the full speed range of the activity, so narrowing the filter hides segments but does not recompress the remaining colors
 - Tap **Reset** to restore the original range
 
-For example, if your run shows speeds from 3.00 to 8.00 mph and you set the range to 5.00–8.00, only the portions where you ran at least 5 mph will be visible, with the full blue-to-red gradient spread across that 5–8 mph range.
+For example, if your run shows speeds from 3.00 to 8.00 mph and you set the range to 5.00–8.00, only the portions where you ran at least 5 mph will be visible — and each visible segment keeps the same color it had before you narrowed the range.
 
 Below the map, full stats are shown:
 - Distance, duration

@@ -49,7 +49,9 @@ class LocationTrackingService : Service() {
     private var pausedDuration = 0L
     private var pauseStartTime = 0L
     private var isPaused = false
+    private var isAutoPaused = false
     private var lastSaveTime = 0L
+    private var lastMovementTime = 0L
 
     private val _trackingState = MutableStateFlow(TrackingState())
     val trackingState: StateFlow<TrackingState> = _trackingState.asStateFlow()
@@ -79,7 +81,9 @@ class LocationTrackingService : Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                if (!isPaused) {
+                // Skip when the user manually paused. Auto-paused still
+                // processes locations so we can detect resumed movement.
+                if (!isPaused || isAutoPaused) {
                     result.lastLocation?.let { processLocation(it) }
                 }
             }
@@ -124,7 +128,9 @@ class LocationTrackingService : Service() {
                 wallElapsed - activity.durationMillis
             } else 0L
             isPaused = false
+            isAutoPaused = false
             lastLocation = null
+            lastMovementTime = System.currentTimeMillis()
             _isTracking.value = true
 
             val notification = buildNotification("Resuming...", "Recovering activity")
@@ -152,7 +158,9 @@ class LocationTrackingService : Service() {
         trackingStartTime = System.currentTimeMillis()
         pausedDuration = 0L
         isPaused = false
+        isAutoPaused = false
         lastSaveTime = System.currentTimeMillis()
+        lastMovementTime = System.currentTimeMillis()
         _isTracking.value = true
 
         val notification = buildNotification("00:00", "Starting activity...")
@@ -165,6 +173,7 @@ class LocationTrackingService : Service() {
             while (_isTracking.value) {
                 updateState()
                 periodicSave()
+                checkInactivity()
                 kotlinx.coroutines.delay(1000)
             }
         }
@@ -207,7 +216,20 @@ class LocationTrackingService : Service() {
             // and distance is reasonable to filter GPS jumps
             if (distance < MAX_SINGLE_DISTANCE_METERS && speed < MAX_REASONABLE_SPEED_MPS) {
                 totalDistanceMeters += distance
+                // Real movement — reset the inactivity timer
+                if (distance > MOVEMENT_THRESHOLD_METERS) {
+                    lastMovementTime = System.currentTimeMillis()
+                    // If we were auto-paused and the user started moving again,
+                    // resume automatically.
+                    if (isAutoPaused) {
+                        isAutoPaused = false
+                        resumeTracking()
+                    }
+                }
             }
+        } else {
+            // First fix counts as movement so we don't immediately auto-pause
+            lastMovementTime = System.currentTimeMillis()
         }
 
         if (speed > maxSpeedMps && speed < MAX_REASONABLE_SPEED_MPS) {
@@ -257,6 +279,32 @@ class LocationTrackingService : Service() {
         )
 
         updateNotification(elapsed.coerceAtLeast(0))
+    }
+
+    private fun checkInactivity() {
+        if (!_isTracking.value) return
+        val idleMs = System.currentTimeMillis() - lastMovementTime
+        if (!isAutoPaused && !isPaused && idleMs >= INACTIVITY_PAUSE_MS) {
+            // Auto-pause after a minute of no movement and save progress
+            isAutoPaused = true
+            pauseTracking()
+            saveCurrentState()
+        } else if (isAutoPaused && idleMs >= INACTIVITY_EXIT_MS) {
+            // Still idle — user likely forgot to stop. Finalize and exit.
+            autoStopAndExit()
+        }
+    }
+
+    private fun autoStopAndExit() {
+        // Clear auto-pause so stopTracking() accounts duration correctly.
+        // pausedDuration already accumulates on resume, but we're exiting —
+        // just stop and let stopTracking() snapshot the current paused state.
+        stopTracking()
+        // Kill the process shortly after so the app fully exits as requested.
+        serviceScope.launch {
+            kotlinx.coroutines.delay(500)
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
     }
 
     private fun periodicSave() {
@@ -436,5 +484,8 @@ class LocationTrackingService : Service() {
         private const val MAX_SINGLE_DISTANCE_METERS = 100.0
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
         private const val SAVE_INTERVAL_MS = 30_000L
+        private const val MOVEMENT_THRESHOLD_METERS = 3.0
+        private const val INACTIVITY_PAUSE_MS = 60_000L
+        private const val INACTIVITY_EXIT_MS = 120_000L
     }
 }

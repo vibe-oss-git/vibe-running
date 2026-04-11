@@ -1,5 +1,6 @@
 package com.viberunning.ui.components
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -39,11 +40,13 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.viberunning.data.model.LocationPoint
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
 
 private val SPEED_COLOR_STOPS = listOf(
     Color(0xFF2196F3), // Blue — slowest
@@ -56,10 +59,15 @@ private val SPEED_COLOR_STOPS = listOf(
 @Composable
 fun SpeedMapView(
     points: List<LocationPoint>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    baseHeight: Dp = 360.dp,
+    enlargedHeight: Dp = 560.dp
 ) {
     if (points.size < 2) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(
+            modifier = modifier.height(baseHeight),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = "Not enough GPS data to display a map",
                 style = MaterialTheme.typography.bodyLarge,
@@ -75,18 +83,25 @@ fun SpeedMapView(
     var rangeMin by remember(rawData) { mutableFloatStateOf(rawData.minSpeedMph.toFloat()) }
     var rangeMax by remember(rawData) { mutableFloatStateOf(rawData.maxSpeedMph.toFloat()) }
 
-    // Zoom and pan state
+    // Zoom and pan state — only active while enlarged
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
     var isZoomed by remember { mutableStateOf(false) }
 
+    // Tap-to-enlarge: pinch-to-zoom is only enabled once the user enlarges the map
+    var isEnlarged by remember { mutableStateOf(false) }
+    val mapHeight by animateDpAsState(
+        targetValue = if (isEnlarged) enlargedHeight else baseHeight,
+        label = "mapHeight"
+    )
+
     Column(modifier = modifier) {
-        // Map canvas with zoom/pan
+        // Map canvas with conditional zoom/pan
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .height(mapHeight),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -96,26 +111,45 @@ fun SpeedMapView(
                 modifier = Modifier
                     .fillMaxSize()
                     .clipToBounds()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val newScale = (scale * zoom).coerceIn(1f, 10f)
-                            // Adjust offset to keep the map within bounds when zooming
-                            val maxOffsetX = (newScale - 1f) * size.width / 2f
-                            val maxOffsetY = (newScale - 1f) * size.height / 2f
-                            scale = newScale
-                            offsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
-                            offsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
-                            isZoomed = newScale > 1.05f
-                        }
-                    }
-                    .pointerInput(Unit) {
+                    .then(
+                        // Only intercept pinch/pan gestures when enlarged, so a
+                        // single tap outside the enlarged state always toggles.
+                        if (isEnlarged) {
+                            Modifier.pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    val newScale = (scale * zoom).coerceIn(1f, 10f)
+                                    val maxOffsetX = (newScale - 1f) * size.width / 2f
+                                    val maxOffsetY = (newScale - 1f) * size.height / 2f
+                                    scale = newScale
+                                    offsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
+                                    offsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
+                                    isZoomed = newScale > 1.05f
+                                }
+                            }
+                        } else Modifier
+                    )
+                    .pointerInput(isEnlarged) {
                         detectTapGestures(
-                            onDoubleTap = {
-                                // Reset zoom on double tap
+                            onTap = {
+                                if (isEnlarged && isZoomed) {
+                                    // Ignore taps on a zoomed map; use double-tap to reset
+                                    return@detectTapGestures
+                                }
+                                isEnlarged = !isEnlarged
+                                // Reset zoom whenever we toggle enlarge state
                                 scale = 1f
                                 offsetX = 0f
                                 offsetY = 0f
                                 isZoomed = false
+                            },
+                            onDoubleTap = {
+                                if (isEnlarged) {
+                                    // Reset zoom on double tap while enlarged
+                                    scale = 1f
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                    isZoomed = false
+                                }
                             }
                         )
                     }
@@ -131,29 +165,30 @@ fun SpeedMapView(
                             translationY = offsetY
                         )
                 ) {
-                    drawFilteredRoute(rawData, rangeMin.toDouble(), rangeMax.toDouble(), scale)
+                    drawFilteredRoute(
+                        data = rawData,
+                        filterMin = rangeMin.toDouble(),
+                        filterMax = rangeMax.toDouble(),
+                        absoluteMin = rawData.minSpeedMph,
+                        absoluteMax = rawData.maxSpeedMph,
+                        currentScale = scale
+                    )
                 }
 
-                // Zoom hint
-                if (!isZoomed) {
-                    Text(
-                        text = "Pinch to zoom",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 4.dp)
-                    )
-                } else {
-                    Text(
-                        text = "Double-tap to reset",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 4.dp)
-                    )
+                // Hint text — adapts to current interaction mode
+                val hint = when {
+                    !isEnlarged -> "Tap to enlarge"
+                    isZoomed -> "Double-tap to reset"
+                    else -> "Pinch to zoom · tap to shrink"
                 }
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 4.dp)
+                )
             }
         }
 
@@ -181,33 +216,39 @@ private fun DrawScope.drawFilteredRoute(
     data: RawMapData,
     filterMin: Double,
     filterMax: Double,
+    absoluteMin: Double,
+    absoluteMax: Double,
     currentScale: Float
 ) {
     if (data.normalizedPoints.isEmpty()) return
 
     val padding = 16f
-    val drawWidth = size.width - padding * 2
-    val drawHeight = size.height - padding * 2
+    // Use a square drawing region so aspect ratio is preserved regardless of
+    // the Canvas's container dimensions (don't stretch the route).
+    val side = min(size.width, size.height) - padding * 2
+    val originX = (size.width - side) / 2f
+    val originY = (size.height - side) / 2f
+
     // Scale stroke width inversely with zoom so lines don't become huge
     val strokeWidth = (6f / currentScale).coerceIn(1f, 6f)
     val dotRadius = (10f / currentScale).coerceIn(3f, 10f)
 
-    val effectiveMin = filterMin.coerceAtMost(filterMax - 0.01)
-    val effectiveMax = filterMax
+    // Absolute color range — colors don't recompress when the filter narrows
+    val colorSpan = (absoluteMax - absoluteMin).coerceAtLeast(0.01)
 
     for (seg in data.segmentData) {
         val avgSpeed = seg.avgSpeedMph
         // Skip segments outside the filter range (draw as gap)
-        if (avgSpeed < effectiveMin || avgSpeed > effectiveMax) continue
+        if (avgSpeed < filterMin || avgSpeed > filterMax) continue
 
-        val fraction = ((avgSpeed - effectiveMin) / (effectiveMax - effectiveMin))
+        val fraction = ((avgSpeed - absoluteMin) / colorSpan)
             .toFloat().coerceIn(0f, 1f)
         val color = interpolateColor(fraction)
 
-        val startX = padding + seg.startX * drawWidth
-        val startY = padding + seg.startY * drawHeight
-        val endX = padding + seg.endX * drawWidth
-        val endY = padding + seg.endY * drawHeight
+        val startX = originX + seg.startX * side
+        val startY = originY + seg.startY * side
+        val endX = originX + seg.endX * side
+        val endY = originY + seg.endY * side
 
         drawLine(
             color = color,
@@ -218,19 +259,19 @@ private fun DrawScope.drawFilteredRoute(
         )
     }
 
-    // Start dot (green)
+    // Start dot (green) and end dot (red)
     if (data.normalizedPoints.isNotEmpty()) {
         val first = data.normalizedPoints.first()
         drawCircle(
             color = Color(0xFF4CAF50),
             radius = dotRadius,
-            center = Offset(padding + first.first * drawWidth, padding + first.second * drawHeight)
+            center = Offset(originX + first.first * side, originY + first.second * side)
         )
         val last = data.normalizedPoints.last()
         drawCircle(
             color = Color(0xFFF44336),
             radius = dotRadius,
-            center = Offset(padding + last.first * drawWidth, padding + last.second * drawHeight)
+            center = Offset(originX + last.first * side, originY + last.second * side)
         )
     }
 }
@@ -263,7 +304,8 @@ private fun SpeedLegend(
             }
         }
 
-        // Gradient bar
+        // Absolute gradient bar — always spans the full absolute speed range,
+        // so narrowing the filter does not compress the color scale.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -274,24 +316,24 @@ private fun SpeedLegend(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Range labels
+        // Range labels — show the absolute min, midpoint, and max
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = String.format(Locale.US, "%.2f", rangeMin),
+                text = String.format(Locale.US, "%.2f", absoluteMin),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = String.format(Locale.US, "%.2f", (rangeMin + rangeMax) / 2f),
+                text = String.format(Locale.US, "%.2f", (absoluteMin + absoluteMax) / 2f),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = String.format(Locale.US, "%.2f", rangeMax),
+                text = String.format(Locale.US, "%.2f", absoluteMax),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -299,20 +341,40 @@ private fun SpeedLegend(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Range slider
+        // Range slider — padded inward from the screen edges so dragging the
+        // handles doesn't conflict with the system edge-swipe-back gesture.
         RangeSlider(
             value = rangeMin..rangeMax,
             onValueChange = { range ->
                 onRangeChange(range.start, range.endInclusive)
             },
             valueRange = absoluteMin..absoluteMax,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
+
+        // Current filter readout
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = String.format(
+                    Locale.US,
+                    "Filter: %.2f – %.2f mph",
+                    rangeMin,
+                    rangeMax
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Text(
             text = "Drag handles to filter speed range. Segments outside the range are hidden.",
