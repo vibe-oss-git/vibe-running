@@ -477,10 +477,10 @@ class LocationTrackingService : Service() {
         const val EXTRA_ACTIVITY_ID = "EXTRA_ACTIVITY_ID"
         const val NOTIFICATION_ID = 1
 
-        private const val GPS_INTERVAL_MS = 2100L
-        private const val GPS_FASTEST_INTERVAL_MS = 700L
-        private const val MIN_DISTANCE_METERS = 2f
-        private const val MAX_ACCURACY_METERS = 30f
+        private const val GPS_INTERVAL_MS = 1000L
+        private const val GPS_FASTEST_INTERVAL_MS = 500L
+        private const val MIN_DISTANCE_METERS = 0f
+        private const val MAX_ACCURACY_METERS = 50f
         private const val MAX_SINGLE_DISTANCE_METERS = 100.0
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
         private const val SAVE_INTERVAL_MS = 30_000L
