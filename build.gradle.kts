@@ -11,3 +11,14 @@ allprojects {
         mavenCentral()
     }
 }
+
+// Override Kotlin's JetBrains JDK vendor requirement so any JDK 21 works
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.android") {
+        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+            jvmToolchain {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            }
+        }
+    }
+}
