@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlin.math.abs
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -126,6 +127,7 @@ fun ActivityDetailScreen(
                 // Speed map — larger by default; tap to enlarge further for pinch-zoom
                 SpeedMapView(
                     points = points,
+                    useImperial = useImperial,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -197,6 +199,29 @@ fun ActivityDetailScreen(
                     )
                 }
 
+                // Elevation gain/loss — only show if valid altitude data exists
+                val elevationChange = remember(points) {
+                    computeElevationChange(points)
+                }
+                if (elevationChange != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatsCard(
+                            label = "Elev. Gain",
+                            value = FormatUtils.formatElevation(elevationChange.first, useImperial),
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatsCard(
+                            label = "Elev. Loss",
+                            value = FormatUtils.formatElevation(elevationChange.second, useImperial),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Export KML button
@@ -234,4 +259,36 @@ fun ActivityDetailScreen(
             }
         }
     }
+}
+
+// Computes cumulative elevation gain and loss (in meters) across the activity.
+// Uses the same zero-culling logic as the map: 0.0 altitude values are treated
+// as missing GPS data and excluded, unless all readings are near sea level.
+// Returns (gain, loss) in meters, or null if no valid altitude data exists.
+private fun computeElevationChange(points: List<com.viberunning.data.model.LocationPoint>): Pair<Double, Double>? {
+    if (points.size < 2) return null
+
+    val nonZeroAltitudes = points.filter { it.altitude != 0.0 }
+    val validPoints = if (nonZeroAltitudes.isEmpty()) {
+        return null
+    } else if (nonZeroAltitudes.all { abs(it.altitude) < 30.0 }) {
+        // Near sea level — keep all points including 0.0
+        points
+    } else if (nonZeroAltitudes.size < 2) {
+        return null
+    } else {
+        // Cull 0.0 values as missing data
+        nonZeroAltitudes
+    }
+
+    // Sum positive deltas as gain, negative deltas as loss
+    var totalGain = 0.0
+    var totalLoss = 0.0
+    for (i in 1 until validPoints.size) {
+        val delta = validPoints[i].altitude - validPoints[i - 1].altitude
+        if (delta > 0) totalGain += delta else totalLoss += -delta
+    }
+
+    if (totalGain == 0.0 && totalLoss == 0.0) return null
+    return Pair(totalGain, totalLoss)
 }

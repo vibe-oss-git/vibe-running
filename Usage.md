@@ -69,12 +69,24 @@ Tap any run to open its speed map and detail screen.
 
 ## Activity Details & Speed Map
 
-The detail screen opens with an interactive **speed map** at the top — a plotted route of your run colored by speed:
+The detail screen opens with an interactive **route map** at the top — a plotted route of your run colored by a selected metric. Two color modes are available via toggle chips above the map:
+
+#### Speed Mode (default)
 - **Blue** segments = slowest
 - **Green/Yellow** segments = moderate
 - **Orange/Red** segments = fastest
+
+#### Elevation Mode
+- **Dark green** segments = lowest altitude
+- **Green/Lime** segments = moderate altitude
+- **Orange/Brown** segments = highest altitude
+- **Gray** segments = no altitude data available for that portion
+
+If the activity has no valid elevation data, the elevation toggle is hidden.
+
+In both modes:
 - A **green dot** marks the start and a **red dot** marks the finish
-- A gradient legend below the map shows the speed range in **mph to 2 decimal places**
+- A gradient legend below the map shows the value range (speed in mph, or elevation in ft/m)
 
 ### Zooming and Panning
 - **Tap** the map once to enlarge it — this unlocks zoom/pan gestures
@@ -97,8 +109,9 @@ For example, if your run shows speeds from 3.00 to 8.00 mph and you set the rang
 Below the map, full stats are shown:
 - Distance, duration
 - Average pace, average speed
-- Max speed
+- Max speed, calories
 - Number of GPS points recorded
+- **Elevation Gain** and **Elevation Loss** — cumulative ascent and descent across the run (only shown if valid altitude data exists). Values with missing altitude readings (0.0) are excluded from the calculation unless all readings are near sea level.
 
 ### Exporting to Google Earth (KML)
 1. Open an activity from the History tab.

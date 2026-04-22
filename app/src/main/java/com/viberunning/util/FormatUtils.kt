@@ -55,6 +55,16 @@ object FormatUtils {
         return String.format(Locale.US, "%d:%02d /%s", minutes, seconds, unit)
     }
 
+    // Formats elevation values — converts meters to feet for imperial
+    fun formatElevation(meters: Double, useImperial: Boolean): String {
+        return if (useImperial) {
+            val feet = meters * 3.28084
+            String.format(Locale.US, "%.0f ft", feet)
+        } else {
+            String.format(Locale.US, "%.0f m", meters)
+        }
+    }
+
     fun formatDate(timestamp: Long): String {
         val sdf = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
         return sdf.format(Date(timestamp))
