@@ -208,3 +208,50 @@ The app defaults to **imperial** units (miles, mph, min/mi). To switch to **metr
 - The unit preference is stored locally and persists across app restarts.
 
 All internal measurements use meters and seconds — unit conversion is applied only at display time, so switching units does not affect your saved data.
+
+---
+
+## Building from the Command Line
+
+You can build the app without Android Studio using the Gradle wrapper included in the repo.
+
+### Prerequisites
+
+1. **Android SDK** — must be installed with `platforms;android-35` and `build-tools;35.0.0` (or newer). The SDK path is set in `local.properties` (e.g., `sdk.dir=/home/you/Android/Sdk`).
+2. **JDK 21** — install via your system package manager (e.g., `java-21-openjdk-devel` on openSUSE, `openjdk-21-jdk` on Ubuntu).
+3. **JetBrains Runtime (JBR)** — Kotlin 2.2.10 requires a JetBrains JDK for compilation. If you have Android Studio installed, it bundles one (look for a `jbr/` directory inside the Android Studio installation). You can find it with:
+   ```bash
+   find ~ -path "*/jbr/bin/java" -type f 2>/dev/null
+   ```
+
+### Global Gradle Configuration
+
+Create or edit `~/.gradle/gradle.properties` with paths to your JDKs:
+
+```properties
+org.gradle.java.home=/usr/lib64/jvm/java-21-openjdk-21
+org.gradle.java.installations.paths=/path/to/android-studio/jbr
+```
+
+- `org.gradle.java.home` — the JDK that runs Gradle itself (any JDK 21+ works).
+- `org.gradle.java.installations.paths` — path to the JetBrains Runtime so the Kotlin compiler can find it.
+
+**Note:** If Android Studio is installed via Flatpak, the JBR path includes a hash that changes on every update. After updating Android Studio, re-run the `find` command above and update this path.
+
+### Build Commands
+
+```bash
+# Build debug APK
+./gradlew assembleDebug
+
+# Build release APK
+./gradlew assembleRelease
+
+# Install debug APK on a connected device
+./gradlew installDebug
+
+# Clean build artifacts
+./gradlew clean
+```
+
+The debug APK is output to `app/build/outputs/apk/debug/app-debug.apk`.
