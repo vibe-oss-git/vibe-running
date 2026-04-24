@@ -177,7 +177,10 @@ fun VibeRunningNavHost() {
             composable(Screen.Stats.route) {
                 StatsScreen(
                     viewModel = statsViewModel,
-                    useImperial = useImperial
+                    useImperial = useImperial,
+                    onActivityClick = { activityId ->
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    }
                 )
             }
 

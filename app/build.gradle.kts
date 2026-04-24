@@ -13,8 +13,8 @@ android {
         applicationId = "com.viberunning"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.0"
+        versionCode = 11
+        versionName = "2.1"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }

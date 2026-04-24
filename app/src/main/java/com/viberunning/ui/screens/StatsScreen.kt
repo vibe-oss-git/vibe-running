@@ -27,7 +27,8 @@ import com.viberunning.viewmodel.StatsViewModel
 @Composable
 fun StatsScreen(
     viewModel: StatsViewModel,
-    useImperial: Boolean
+    useImperial: Boolean,
+    onActivityClick: (Long) -> Unit = {}
 ) {
     val topSpeed by viewModel.topSpeed.collectAsState()
     val longestDistance by viewModel.longestDistance.collectAsState()
@@ -75,13 +76,15 @@ fun StatsScreen(
             ) {
                 StatsCard(
                     label = "Top Speed",
-                    value = topSpeed?.let { FormatUtils.formatSpeed(it, useImperial) } ?: "--",
-                    modifier = Modifier.weight(1f)
+                    value = topSpeed?.let { FormatUtils.formatSpeed(it.maxSpeedMps, useImperial) } ?: "--",
+                    modifier = Modifier.weight(1f),
+                    onClick = topSpeed?.let { { onActivityClick(it.id) } }
                 )
                 StatsCard(
                     label = "Longest Distance",
-                    value = longestDistance?.let { FormatUtils.formatDistance(it, useImperial) } ?: "--",
-                    modifier = Modifier.weight(1f)
+                    value = longestDistance?.let { FormatUtils.formatDistance(it.distanceMeters, useImperial) } ?: "--",
+                    modifier = Modifier.weight(1f),
+                    onClick = longestDistance?.let { { onActivityClick(it.id) } }
                 )
             }
 
@@ -96,14 +99,16 @@ fun StatsScreen(
                     value = fastestPace?.let {
                         FormatUtils.formatPace(it.avgSpeedMps, useImperial)
                     } ?: "--",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = fastestPace?.let { { onActivityClick(it.id) } }
                 )
                 StatsCard(
                     label = "Longest Run",
                     value = longestDuration?.let {
                         FormatUtils.formatDuration(it.durationMillis)
                     } ?: "--",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = longestDuration?.let { { onActivityClick(it.id) } }
                 )
             }
 

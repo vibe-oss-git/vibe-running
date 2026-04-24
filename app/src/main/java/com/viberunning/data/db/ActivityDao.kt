@@ -32,11 +32,11 @@ interface ActivityDao {
     suspend fun deleteById(id: Long)
 
     // Stats queries
-    @Query("SELECT MAX(maxSpeedMps) FROM activities WHERE status = 'completed'")
-    fun observeTopSpeed(): Flow<Double?>
+    @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY maxSpeedMps DESC LIMIT 1")
+    fun observeTopSpeed(): Flow<Activity?>
 
-    @Query("SELECT MAX(distanceMeters) FROM activities WHERE status = 'completed'")
-    fun observeLongestDistance(): Flow<Double?>
+    @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY distanceMeters DESC LIMIT 1")
+    fun observeLongestDistance(): Flow<Activity?>
 
     @Query("SELECT * FROM activities WHERE status = 'completed' AND distanceMeters > 0 ORDER BY (durationMillis / distanceMeters) ASC LIMIT 1")
     fun observeFastestPace(): Flow<Activity?>

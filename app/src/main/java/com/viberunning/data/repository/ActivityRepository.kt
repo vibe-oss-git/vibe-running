@@ -37,8 +37,8 @@ class ActivityRepository(
     suspend fun getInProgressActivity(): Activity? = activityDao.getInProgress()
 
     // Stats
-    fun observeTopSpeed(): Flow<Double?> = activityDao.observeTopSpeed()
-    fun observeLongestDistance(): Flow<Double?> = activityDao.observeLongestDistance()
+    fun observeTopSpeed(): Flow<Activity?> = activityDao.observeTopSpeed()
+    fun observeLongestDistance(): Flow<Activity?> = activityDao.observeLongestDistance()
     fun observeFastestPace(): Flow<Activity?> = activityDao.observeFastestPace()
     fun observeLongestDuration(): Flow<Activity?> = activityDao.observeLongestDuration()
     fun observeTotalActivities(): Flow<Int> = activityDao.observeTotalActivities()

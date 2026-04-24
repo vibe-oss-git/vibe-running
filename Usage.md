@@ -139,6 +139,8 @@ Tap the **Stats** tab to see your all-time records and totals.
 - **Best Pace** — run with the fastest average pace
 - **Longest Run** — run with the greatest duration
 
+Tap any personal record card to view the activity where that record was set.
+
 ### Lifetime Totals
 - Total number of completed activities
 - Total distance across all runs

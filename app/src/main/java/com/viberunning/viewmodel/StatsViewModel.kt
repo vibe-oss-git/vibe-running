@@ -13,10 +13,10 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = (application as VibeRunningApp).repository
 
-    val topSpeed: StateFlow<Double?> = repository.observeTopSpeed()
+    val topSpeed: StateFlow<Activity?> = repository.observeTopSpeed()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val longestDistance: StateFlow<Double?> = repository.observeLongestDistance()
+    val longestDistance: StateFlow<Activity?> = repository.observeLongestDistance()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val fastestPace: StateFlow<Activity?> = repository.observeFastestPace()
