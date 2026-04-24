@@ -244,6 +244,23 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                if (state.lapCount > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatsCard(
+                            label = "Laps",
+                            value = "${state.lapCount}",
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatsCard(
+                            label = "Current Lap",
+                            value = FormatUtils.formatDistance(state.currentLapDistanceMeters, useImperial),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
 

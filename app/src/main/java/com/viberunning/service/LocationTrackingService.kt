@@ -23,6 +23,7 @@ import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
 import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.FormatUtils
+import com.viberunning.util.LapDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,6 +54,12 @@ class LocationTrackingService : Service() {
     private var lastSaveTime = 0L
     private var lastMovementTime = 0L
 
+    private var startLatitude = 0.0
+    private var startLongitude = 0.0
+    private var lapCount = 0
+    private var wasInsideGeofence = true
+    private var lastLapDistance = 0.0
+
     private val _trackingState = MutableStateFlow(TrackingState())
     val trackingState: StateFlow<TrackingState> = _trackingState.asStateFlow()
 
@@ -67,7 +74,9 @@ class LocationTrackingService : Service() {
         val maxSpeedMps: Double = 0.0,
         val avgSpeedMps: Double = 0.0,
         val isPaused: Boolean = false,
-        val pointCount: Int = 0
+        val pointCount: Int = 0,
+        val lapCount: Int = 0,
+        val currentLapDistanceMeters: Double = 0.0
     )
 
     inner class TrackingBinder : Binder() {
@@ -161,6 +170,11 @@ class LocationTrackingService : Service() {
         isAutoPaused = false
         lastSaveTime = System.currentTimeMillis()
         lastMovementTime = System.currentTimeMillis()
+        startLatitude = 0.0
+        startLongitude = 0.0
+        lapCount = 0
+        wasInsideGeofence = true
+        lastLapDistance = 0.0
         _isTracking.value = true
 
         val notification = buildNotification("00:00", "Starting activity...")
@@ -228,7 +242,9 @@ class LocationTrackingService : Service() {
                 }
             }
         } else {
-            // First fix counts as movement so we don't immediately auto-pause
+            // First fix — record start position for lap detection
+            startLatitude = location.latitude
+            startLongitude = location.longitude
             lastMovementTime = System.currentTimeMillis()
         }
 
@@ -237,6 +253,22 @@ class LocationTrackingService : Service() {
         }
 
         lastLocation = location
+
+        if (startLatitude != 0.0) {
+            val (newLapCount, insideNow, newLastLapDist) = LapDetector.detectLapCount(
+                startLat = startLatitude,
+                startLon = startLongitude,
+                currentLat = location.latitude,
+                currentLon = location.longitude,
+                totalDistance = totalDistanceMeters,
+                previousLapCount = lapCount,
+                wasInsideGeofence = wasInsideGeofence,
+                lastLapDistance = lastLapDistance
+            )
+            lapCount = newLapCount
+            wasInsideGeofence = insideNow
+            lastLapDistance = newLastLapDist
+        }
 
         val point = LocationPoint(
             activityId = currentActivityId,
@@ -275,7 +307,9 @@ class LocationTrackingService : Service() {
             maxSpeedMps = maxSpeedMps,
             avgSpeedMps = avgSpeed,
             isPaused = isPaused,
-            pointCount = _trackingState.value.pointCount + 1
+            pointCount = _trackingState.value.pointCount + 1,
+            lapCount = lapCount,
+            currentLapDistanceMeters = totalDistanceMeters - lastLapDistance
         )
 
         updateNotification(elapsed.coerceAtLeast(0))

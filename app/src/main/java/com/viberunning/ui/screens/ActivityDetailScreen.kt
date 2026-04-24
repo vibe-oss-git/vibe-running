@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,13 +34,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlin.math.abs
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.viberunning.ui.components.SpeedMapView
 import com.viberunning.ui.components.StatsCard
 import com.viberunning.util.FormatUtils
 import com.viberunning.util.KmlExporter
+import com.viberunning.util.Lap
+import com.viberunning.util.LapDetector
 import com.viberunning.viewmodel.HistoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -222,6 +227,15 @@ fun ActivityDetailScreen(
                     }
                 }
 
+                // Lap splits
+                val laps = remember(points) { LapDetector.detectLaps(points) }
+                if (laps.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LapSplitsTable(laps = laps, useImperial = useImperial)
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Export KML button
@@ -291,4 +305,72 @@ private fun computeElevationChange(points: List<com.viberunning.data.model.Locat
 
     if (totalGain == 0.0 && totalLoss == 0.0) return null
     return Pair(totalGain, totalLoss)
+}
+
+@Composable
+private fun LapSplitsTable(laps: List<Lap>, useImperial: Boolean) {
+    val bestLapIndex = laps.indices.minByOrNull { laps[it].durationMillis }
+
+    Text(
+        text = "Lap Splits",
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.padding(bottom = 12.dp)
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Lap", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(0.6f))
+        Text("Distance", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        Text("Time", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        Text("Pace", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+    }
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    laps.forEachIndexed { index, lap ->
+        val isBest = index == bestLapIndex && laps.size > 1
+        val textColor = if (isBest) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
+        val weight = if (isBest) FontWeight.Bold else FontWeight.Normal
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "${lap.number}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                fontWeight = weight,
+                modifier = Modifier.weight(0.6f)
+            )
+            Text(
+                FormatUtils.formatDistance(lap.distanceMeters, useImperial),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                fontWeight = weight,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                FormatUtils.formatDuration(lap.durationMillis),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                fontWeight = weight,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                FormatUtils.formatPace(lap.avgSpeedMps, useImperial),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                fontWeight = weight,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
 }

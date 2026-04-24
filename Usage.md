@@ -41,6 +41,7 @@ The screen displays real-time stats:
 - **Pace** — minutes per mile or per kilometer
 - **Speed** — current speed
 - **Max Speed** — fastest speed recorded so far
+- **Laps / Current Lap** — appears automatically when you complete a lap (pass within 30m of your starting point after covering at least 200m)
 
 ### Pausing and Resuming
 Tap the large **PAUSE** button (left side) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused. Tap **RESUME** to continue.
@@ -112,6 +113,9 @@ Below the map, full stats are shown:
 - Max speed, calories
 - Number of GPS points recorded
 - **Elevation Gain** and **Elevation Loss** — cumulative ascent and descent across the run (only shown if valid altitude data exists). Values with missing altitude readings (0.0) are excluded from the calculation unless all readings are near sea level.
+
+### Lap Splits
+If you ran a loop route (passing within 30m of your starting point), a **Lap Splits** table appears below the stats. Each lap shows distance, time, and pace. The fastest lap is highlighted in bold with the primary color. Laps require at least 200m and 60 seconds to register, which filters out false detections from passing near the start point mid-lap.
 
 ### Exporting to Google Earth (KML)
 1. Open an activity from the History tab.
