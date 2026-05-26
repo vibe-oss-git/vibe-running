@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.viberunning.ui.components.MetricChart
 import com.viberunning.ui.components.StatsCard
 import com.viberunning.util.FormatUtils
 import com.viberunning.viewmodel.StatsViewModel
@@ -38,6 +39,7 @@ fun StatsScreen(
     val totalDistance by viewModel.totalDistance.collectAsState()
     val totalDuration by viewModel.totalDuration.collectAsState()
     val totalCalories by viewModel.totalCalories.collectAsState()
+    val completedActivities by viewModel.completedActivities.collectAsState()
 
     Column(
         modifier = Modifier
@@ -178,6 +180,21 @@ fun StatsScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Trends",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            MetricChart(
+                activities = completedActivities,
+                useImperial = useImperial
+            )
 
             Spacer(modifier = Modifier.height(80.dp))
         }

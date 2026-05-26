@@ -153,6 +153,14 @@ Tap any personal record card to view the activity where that record was set.
 - Total calories burned
 - Average calories per run
 
+### Trends
+
+Below the totals, a **Trends** chart plots one metric per completed activity in chronological order (oldest to newest). Tap a chip to switch metrics:
+- **Distance**, **Duration**, **Calories** — shown as bar charts (cumulative quantities)
+- **Avg Speed**, **Top Speed**, **Pace** — shown as line charts (rates)
+
+The chart shows the max value and activity count above the plot. With no completed activities yet, the chart area shows "Not enough data yet."
+
 Stats update automatically as you complete more runs. Deleting an activity updates all stats and records accordingly.
 
 ---
