@@ -12,7 +12,7 @@ Switch both to the platform `LocationManager` with `GPS_PROVIDER` and drop the d
 **Why**
 - Works on devices without Google Play Services (LineageOS without GApps, GrapheneOS, Huawei, etc.)
 - Location requests no longer pass through a Google component — consistent with the fully-offline design
-- Removes the only proprietary dependency: clean GPL-3.0 compatibility without a linking exception, and eligible for F-Droid
+- Removes the only proprietary dependency: eligible for F-Droid, and the Play Services linking exception in `NOTICE` can be dropped
 
 **Notes**
 - Keep the existing 3s sampling interval and noise filters (accuracy >30m, speed >50m/s, jumps >100m)
