@@ -49,7 +49,7 @@ Tap the large **PAUSE** button (left side) to pause tracking. The timer stops an
 ### Automatic Inactivity Pause
 If you stop moving for **1 minute** (e.g., you stop to wait at a crosswalk, or you forget to stop the app), tracking automatically pauses and your progress is saved. If you start moving again, tracking resumes automatically. If you remain stationary for another minute (**2 minutes total** of no movement), the app finalizes the activity, stops the tracking service, and exits, so you don't burn battery if you forgot to stop.
 
-Both times can be changed in Settings (see [Inactivity Timers](#inactivity-timers)).
+Both times can be changed in Settings (see [Inactivity Timers](#inactivity-timers)). If Android stops the tracking service and it restarts mid-run, the inactivity timers start counting again from the restart.
 
 ### Stopping
 Tap the large red **STOP** button (right side). A full-screen confirmation appears with three options, spread vertically:

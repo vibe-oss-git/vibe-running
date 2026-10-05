@@ -49,6 +49,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         val activity = _selectedActivity.value ?: return null
         val points = _selectedActivityPoints.value
         if (points.isEmpty()) return null
-        return KmlExporter.exportToKml(context, activity, points)
+        val useImperial = (context as VibeRunningApp).preferencesManager.useImperial
+        return KmlExporter.exportToKml(context, activity, points, useImperial)
     }
 }

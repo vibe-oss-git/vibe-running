@@ -143,6 +143,7 @@ class LocationTrackingService : Service() {
             isAutoPaused = false
             lastLocation = null
             lastMovementTime = System.currentTimeMillis()
+            loadInactivitySettings()
             _isTracking.value = true
 
             val notification = buildNotification("Resuming...", "Recovering activity")
@@ -155,6 +156,7 @@ class LocationTrackingService : Service() {
                 while (_isTracking.value) {
                     updateState()
                     periodicSave()
+                    checkInactivity()
                     kotlinx.coroutines.delay(1000)
                 }
             }
@@ -173,10 +175,7 @@ class LocationTrackingService : Service() {
         isAutoPaused = false
         lastSaveTime = System.currentTimeMillis()
         lastMovementTime = System.currentTimeMillis()
-        // Read once per run; changes in Settings apply to the next run.
-        val prefs = (application as VibeRunningApp).preferencesManager
-        inactivityPauseMs = prefs.inactivityPauseMinutes * 60_000L
-        inactivityExitMs = prefs.inactivityExitMinutes * 60_000L
+        loadInactivitySettings()
         startLatitude = 0.0
         startLongitude = 0.0
         lapCount = 0
@@ -320,6 +319,13 @@ class LocationTrackingService : Service() {
         )
 
         updateNotification(elapsed.coerceAtLeast(0))
+    }
+
+    // Read once per run; changes in Settings apply to the next run.
+    private fun loadInactivitySettings() {
+        val prefs = (application as VibeRunningApp).preferencesManager
+        inactivityPauseMs = prefs.inactivityPauseMinutes * 60_000L
+        inactivityExitMs = prefs.inactivityExitMinutes * 60_000L
     }
 
     private fun checkInactivity() {
