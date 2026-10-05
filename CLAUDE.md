@@ -45,11 +45,12 @@ Manual construction in `VibeRunningApp` (Application subclass). Database singlet
 `KmlExporter` generates valid KML 2.2 with `gx:Track` extensions for Google Earth. Files go to cache dir, shared via `FileProvider` with scoped URI grants. The export is triggered from `ActivityDetailScreen` through `HistoryViewModel`.
 
 ### Navigation
-Jetpack Compose Navigation with `NavHost`. Three bottom nav tabs (Home/History/Stats) plus `ActivityDetail` as a pushed route. Routes defined as sealed class in `NavGraph.kt`.
+Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` as a pushed route. Routes defined as sealed class in `NavGraph.kt`.
 
 ## Key Constraints
 
-- **Fully offline** — no INTERNET permission, no network calls. All data stays on-device.
+- **Fully offline** — no INTERNET permission, no network calls. All data stays on-device; `android:allowBackup="false"`.
+- **License** — GPL-3.0 only, with a Play Services linking exception in `NOTICE`. Planned work is tracked in `TODO.md`.
 - **GPS hardware required** — `uses-feature android:required="true"` in manifest.
 - **Min SDK 26** (Android 8.0) — no need for pre-Oreo compat.
 - **Units toggle** — imperial (default) or metric, stored in SharedPreferences. All internal calculations use meters/seconds; conversion happens at display time in `FormatUtils`.
@@ -57,8 +58,9 @@ Jetpack Compose Navigation with `NavHost`. Three bottom nav tabs (Home/History/S
 ## Dependencies
 
 - Compose BOM 2024.12.01 with Material 3
-- Room 2.6.1 with KSP compiler
+- Room 2.7.1 with KSP compiler
 - Google Play Services Location 21.3.0
 - Lifecycle 2.8.7 (includes lifecycle-service for foreground service)
 - Navigation Compose 2.8.5
-- Kotlin 2.1.0, Gradle 8.13, AGP 8.13.2, compileSdk 35
+- Kotlin 2.2.10, KSP 2.2.10-2.0.2, Gradle 9.3.1, AGP 9.1.1, compileSdk 35
+- JDK 21 toolchain (see `Usage.md` for CLI build setup)
