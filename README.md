@@ -20,7 +20,7 @@ See [Usage.md](Usage.md) for a full guide to every screen.
 
 - The app has no `INTERNET` permission and makes no network calls.
 - All data is stored in a local database on the device. Android backup is disabled, so it isn't copied to cloud backups.
-- Exported KML files are only shared when you choose to share them.
+- Exported KML files are only shared when and where you choose to share them.
 
 Location updates currently come from Google Play Services' fused location provider, so the app needs Play Services on the device. Replacing it with Android's built-in `LocationManager` is planned. See [TODO.md](TODO.md).
 
