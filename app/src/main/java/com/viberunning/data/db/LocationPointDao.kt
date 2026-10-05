@@ -12,15 +12,9 @@ interface LocationPointDao {
     @Insert
     suspend fun insert(point: LocationPoint)
 
-    @Insert
-    suspend fun insertAll(points: List<LocationPoint>)
-
-    @Query("SELECT * FROM location_points WHERE activityId = :activityId ORDER BY timestamp ASC")
-    suspend fun getByActivityId(activityId: Long): List<LocationPoint>
-
     @Query("SELECT * FROM location_points WHERE activityId = :activityId ORDER BY timestamp ASC")
     fun observeByActivityId(activityId: Long): Flow<List<LocationPoint>>
 
-    @Query("SELECT COUNT(*) FROM location_points WHERE activityId = :activityId")
-    suspend fun getCountForActivity(activityId: Long): Int
+    @Query("SELECT MAX(timestamp) FROM location_points WHERE activityId = :activityId")
+    suspend fun getLastTimestamp(activityId: Long): Long?
 }

@@ -87,7 +87,6 @@ class LocationTrackingService : Service() {
         val maxSpeedMps: Double = 0.0,
         val avgSpeedMps: Double = 0.0,
         val isPaused: Boolean = false,
-        val pointCount: Int = 0,
         val lapCount: Int = 0,
         val currentLapDistanceMeters: Double = 0.0
     )
@@ -151,6 +150,7 @@ class LocationTrackingService : Service() {
             else -> {
                 // Service restarted by system (START_STICKY) — try to recover
                 if (!_isTracking.value) {
+                    isActive = true
                     recoverInProgressActivity()
                 }
             }
@@ -162,6 +162,7 @@ class LocationTrackingService : Service() {
         serviceScope.launch {
             val app = application as VibeRunningApp
             val activity = app.repository.getInProgressActivity() ?: run {
+                isActive = false
                 stopSelf()
                 return@launch
             }
@@ -203,6 +204,7 @@ class LocationTrackingService : Service() {
 
     @Suppress("MissingPermission")
     private fun startTracking(activityId: Long) {
+        isActive = true
         currentActivityId = activityId
         totalDistanceMeters = 0.0
         maxSpeedMps = 0.0
@@ -366,7 +368,6 @@ class LocationTrackingService : Service() {
             maxSpeedMps = maxSpeedMps,
             avgSpeedMps = avgSpeed,
             isPaused = isPaused,
-            pointCount = _trackingState.value.pointCount + 1,
             lapCount = lapCount,
             currentLapDistanceMeters = totalDistanceMeters - lastLapDistance
         )
@@ -392,6 +393,11 @@ class LocationTrackingService : Service() {
         } else if (isAutoPaused && idleMs >= inactivityExitMs) {
             // Still idle — user likely forgot to stop. Finalize and exit.
             autoStopAndExit()
+        } else if (isPaused && !isAutoPaused &&
+            System.currentTimeMillis() - pauseStartTime >= MANUAL_PAUSE_LIMIT_MS
+        ) {
+            // Paused by the user and never resumed — save the run. The app stays open.
+            stopTracking()
         }
     }
 
@@ -473,6 +479,7 @@ class LocationTrackingService : Service() {
         val wasTracking = _isTracking.value
         fusedLocationClient.removeLocationUpdates(locationCallback)
         _isTracking.value = false
+        isActive = false
 
         val activityId = currentActivityId
         val elapsed = if (isPaused) {
@@ -539,6 +546,7 @@ class LocationTrackingService : Service() {
             fusedLocationClient.removeLocationUpdates(locationCallback)
             saveCurrentStateBlocking()
         }
+        isActive = false
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -586,6 +594,15 @@ class LocationTrackingService : Service() {
     }
 
     companion object {
+        /**
+         * True while a service instance in this process is tracking or recovering a run.
+         * It resets when the process dies, so an in-progress activity found while this is
+         * false was interrupted and nothing is recording it.
+         */
+        @Volatile
+        var isActive = false
+            private set
+
         const val ACTION_START = "ACTION_START"
         const val ACTION_PAUSE = "ACTION_PAUSE"
         const val ACTION_RESUME = "ACTION_RESUME"
@@ -603,5 +620,6 @@ class LocationTrackingService : Service() {
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
         private const val SAVE_INTERVAL_MS = 30_000L
         private const val MOVEMENT_THRESHOLD_METERS = 10.0
+        private const val MANUAL_PAUSE_LIMIT_MS = 60 * 60_000L
     }
 }

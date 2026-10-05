@@ -9,13 +9,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.viberunning.data.model.Activity
 import com.viberunning.ui.components.WeightPromptDialog
 import com.viberunning.ui.navigation.Screen
 import com.viberunning.ui.navigation.bottomNavItems
@@ -40,6 +45,7 @@ import com.viberunning.ui.screens.ProfileScreen
 import com.viberunning.ui.screens.SettingsScreen
 import com.viberunning.ui.screens.StatsScreen
 import com.viberunning.ui.theme.VibeRunningTheme
+import com.viberunning.util.FormatUtils
 import com.viberunning.viewmodel.HistoryViewModel
 import com.viberunning.viewmodel.StatsViewModel
 import com.viberunning.viewmodel.TrackingViewModel
@@ -111,8 +117,19 @@ fun VibeRunningNavHost() {
         }
     }
 
-    // Weight prompt dialog
-    if (showWeightPrompt) {
+    // Run left in progress when Android killed the app
+    val interruptedActivity by trackingViewModel.interruptedActivity.collectAsState()
+    interruptedActivity?.let { activity ->
+        InterruptedRunDialog(
+            activity = activity,
+            useImperial = useImperial,
+            onSave = { trackingViewModel.saveInterruptedActivity() },
+            onDiscard = { trackingViewModel.discardInterruptedActivity() }
+        )
+    }
+
+    // Weight prompt dialog (after any interrupted run is dealt with)
+    if (showWeightPrompt && interruptedActivity == null) {
         WeightPromptDialog(
             preferencesManager = prefs,
             useImperial = useImperial,
@@ -234,4 +251,35 @@ fun VibeRunningNavHost() {
             }
         }
     }
+}
+
+@Composable
+private fun InterruptedRunDialog(
+    activity: Activity,
+    useImperial: Boolean,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit
+) {
+    AlertDialog(
+        // Require a choice; tapping outside does nothing
+        onDismissRequest = {},
+        title = { Text("Unfinished Run") },
+        text = {
+            Text(
+                "The run you started ${FormatUtils.formatDateTime(activity.startTime)} " +
+                    "was interrupted when the app was closed by Android.\n\n" +
+                    "Recorded: ${FormatUtils.formatDistance(activity.distanceMeters, useImperial)} " +
+                    "in ${FormatUtils.formatDuration(activity.durationMillis)}. " +
+                    "Up to the last 30 seconds before it stopped may be missing."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onSave) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDiscard) {
+                Text("Discard", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    )
 }

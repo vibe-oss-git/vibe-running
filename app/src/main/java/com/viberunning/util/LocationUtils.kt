@@ -12,18 +12,4 @@ object LocationUtils {
         Location.distanceBetween(lat1, lon1, lat2, lon2, results)
         return results[0]
     }
-
-    fun calculateTotalDistance(
-        points: List<Pair<Double, Double>>
-    ): Double {
-        if (points.size < 2) return 0.0
-        var total = 0.0
-        for (i in 1 until points.size) {
-            total += distanceBetween(
-                points[i - 1].first, points[i - 1].second,
-                points[i].first, points[i].second
-            )
-        }
-        return total
-    }
 }

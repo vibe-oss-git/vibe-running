@@ -9,7 +9,9 @@ import android.os.IBinder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.viberunning.VibeRunningApp
+import com.viberunning.data.model.Activity
 import com.viberunning.service.LocationTrackingService
+import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.GpsStatusMonitor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +27,6 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
 
     val gpsSignal: StateFlow<GpsStatusMonitor.GpsSignal> = gpsMonitor.signal
 
-    private var trackingService: LocationTrackingService? = null
     private var isBound = false
     private var serviceCollectors: List<Job> = emptyList()
     // Set between tapping Start and the service reporting it is tracking,
@@ -41,22 +42,75 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
     private val _currentActivityId = MutableStateFlow(-1L)
     val currentActivityId: StateFlow<Long> = _currentActivityId.asStateFlow()
 
+    // A run left in progress with nothing tracking it (Android killed the app and
+    // didn't restart the service). The UI asks whether to save or discard it.
+    private val _interruptedActivity = MutableStateFlow<Activity?>(null)
+    val interruptedActivity: StateFlow<Activity?> = _interruptedActivity.asStateFlow()
+
     init {
-        // Check for an in-progress activity and reconnect to the running service
+        checkForInProgressActivity()
+    }
+
+    private fun checkForInProgressActivity() {
         viewModelScope.launch {
-            val inProgress = repository.getInProgressActivity()
-            if (inProgress != null) {
+            val inProgress = repository.getInProgressActivity() ?: return@launch
+            if (LocationTrackingService.isActive) {
+                // Still being tracked — reconnect to the running service
                 _currentActivityId.value = inProgress.id
                 bind()
+            } else {
+                _interruptedActivity.value = inProgress
+                // Without auto-create: connects only if Android restarts the service
+                // and it resumes this run, in which case the prompt is withdrawn.
+                bind(autoCreate = false)
             }
+        }
+    }
+
+    /** Saves an interrupted run with the values recorded up to its last periodic save. */
+    fun saveInterruptedActivity() {
+        val activity = _interruptedActivity.value ?: return
+        _interruptedActivity.value = null
+        // The service may have resumed this run since the prompt appeared
+        if (LocationTrackingService.isActive) return
+        viewModelScope.launch {
+            val prefs = app.preferencesManager
+            val calories = CalorieEstimator.estimate(
+                avgSpeedMps = activity.avgSpeedMps,
+                durationMillis = activity.durationMillis,
+                weightLbs = prefs.weightLbs,
+                heightInches = prefs.heightInches,
+                ageYears = prefs.ageYears,
+                isMale = prefs.sex == "male"
+            )
+            val endTime = repository.getLastLocationTime(activity.id)
+                ?: (activity.startTime + activity.durationMillis)
+            repository.updateActivity(
+                activity.copy(
+                    endTime = endTime,
+                    caloriesBurned = calories,
+                    status = Activity.STATUS_COMPLETED
+                )
+            )
+            // There may be more than one
+            checkForInProgressActivity()
+        }
+    }
+
+    fun discardInterruptedActivity() {
+        val activity = _interruptedActivity.value ?: return
+        _interruptedActivity.value = null
+        // The service may have resumed this run since the prompt appeared
+        if (LocationTrackingService.isActive) return
+        viewModelScope.launch {
+            repository.deleteActivity(activity.id)
+            checkForInProgressActivity()
         }
     }
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as LocationTrackingService.TrackingBinder).getService()
-            trackingService = service
-
             serviceCollectors.forEach { it.cancel() }
             serviceCollectors = listOf(
                 viewModelScope.launch {
@@ -70,14 +124,17 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
                 viewModelScope.launch {
                     service.isTracking.collect { tracking ->
                         _isTracking.value = tracking
-                        if (tracking) isStarting = false
+                        if (tracking) {
+                            isStarting = false
+                            // The service resumed the run, so it's no longer interrupted
+                            _interruptedActivity.value = null
+                        }
                     }
                 }
             )
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            trackingService = null
             stopCollecting()
         }
     }
@@ -154,7 +211,6 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
             getApplication<VibeRunningApp>().unbindService(serviceConnection)
             isBound = false
         }
-        trackingService = null
         stopCollecting()
     }
 
@@ -163,11 +219,7 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         serviceCollectors = emptyList()
     }
 
-    fun bindToService() {
-        bind()
-    }
-
-    private fun bind() {
+    private fun bind(autoCreate: Boolean = true) {
         if (isBound) return
         val context = getApplication<VibeRunningApp>()
         // Track the binding from here, not onServiceConnected(), so an unbind
@@ -175,7 +227,7 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         isBound = context.bindService(
             Intent(context, LocationTrackingService::class.java),
             serviceConnection,
-            Context.BIND_AUTO_CREATE
+            if (autoCreate) Context.BIND_AUTO_CREATE else 0
         )
     }
 
