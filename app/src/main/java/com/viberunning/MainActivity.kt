@@ -48,7 +48,12 @@ class MainActivity : ComponentActivity() {
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* permissions handled in UI */ }
+    ) { results ->
+        // The Run tab may have asked for GPS status before permission was granted
+        if (results[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            (application as VibeRunningApp).gpsStatusMonitor.onPermissionGranted()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

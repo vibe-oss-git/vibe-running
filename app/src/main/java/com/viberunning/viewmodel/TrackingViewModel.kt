@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.viberunning.VibeRunningApp
 import com.viberunning.service.LocationTrackingService
 import com.viberunning.util.GpsStatusMonitor
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,10 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
 
     private var trackingService: LocationTrackingService? = null
     private var isBound = false
+    private var serviceCollectors: List<Job> = emptyList()
+    // Set between tapping Start and the service reporting it is tracking,
+    // so a double tap can't create two activities.
+    private var isStarting = false
 
     private val _trackingState = MutableStateFlow(LocationTrackingService.TrackingState())
     val trackingState: StateFlow<LocationTrackingService.TrackingState> = _trackingState.asStateFlow()
@@ -42,12 +47,7 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
             val inProgress = repository.getInProgressActivity()
             if (inProgress != null) {
                 _currentActivityId.value = inProgress.id
-                val context = getApplication<VibeRunningApp>()
-                context.bindService(
-                    Intent(context, LocationTrackingService::class.java),
-                    serviceConnection,
-                    Context.BIND_AUTO_CREATE
-                )
+                bind()
             }
         }
     }
@@ -56,26 +56,29 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as LocationTrackingService.TrackingBinder).getService()
             trackingService = service
-            isBound = true
 
-            viewModelScope.launch {
-                service.trackingState.collect { state ->
-                    _trackingState.value = state
-                    if (state.activityId != -1L) {
-                        _currentActivityId.value = state.activityId
+            serviceCollectors.forEach { it.cancel() }
+            serviceCollectors = listOf(
+                viewModelScope.launch {
+                    service.trackingState.collect { state ->
+                        _trackingState.value = state
+                        if (state.activityId != -1L) {
+                            _currentActivityId.value = state.activityId
+                        }
+                    }
+                },
+                viewModelScope.launch {
+                    service.isTracking.collect { tracking ->
+                        _isTracking.value = tracking
+                        if (tracking) isStarting = false
                     }
                 }
-            }
-            viewModelScope.launch {
-                service.isTracking.collect { tracking ->
-                    _isTracking.value = tracking
-                }
-            }
+            )
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             trackingService = null
-            isBound = false
+            stopCollecting()
         }
     }
 
@@ -88,6 +91,8 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun startActivity() {
+        if (isStarting || _isTracking.value) return
+        isStarting = true
         gpsMonitor.stopMonitoring()
         viewModelScope.launch {
             val activityId = repository.createActivity()
@@ -99,11 +104,7 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
                 putExtra(LocationTrackingService.EXTRA_ACTIVITY_ID, activityId)
             }
             context.startForegroundService(intent)
-            context.bindService(
-                Intent(context, LocationTrackingService::class.java),
-                serviceConnection,
-                Context.BIND_AUTO_CREATE
-            )
+            bind()
         }
     }
 
@@ -129,35 +130,49 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
             action = LocationTrackingService.ACTION_STOP
         }
         context.startService(intent)
-        if (isBound) {
-            context.unbindService(serviceConnection)
-            isBound = false
-        }
+        unbind()
         _isTracking.value = false
+        isStarting = false
     }
 
     fun discardActivity() {
-        val id = _currentActivityId.value
+        // The service deletes the activity after it stops recording, so no
+        // location point can be written for an activity that no longer exists.
         val context = getApplication<VibeRunningApp>()
         val intent = Intent(context, LocationTrackingService::class.java).apply {
-            action = LocationTrackingService.ACTION_STOP
+            action = LocationTrackingService.ACTION_DISCARD
+            putExtra(LocationTrackingService.EXTRA_ACTIVITY_ID, _currentActivityId.value)
         }
         context.startService(intent)
+        unbind()
+        _isTracking.value = false
+        isStarting = false
+    }
+
+    private fun unbind() {
         if (isBound) {
-            context.unbindService(serviceConnection)
+            getApplication<VibeRunningApp>().unbindService(serviceConnection)
             isBound = false
         }
-        _isTracking.value = false
-        if (id != -1L) {
-            viewModelScope.launch {
-                repository.deleteActivity(id)
-            }
-        }
+        trackingService = null
+        stopCollecting()
+    }
+
+    private fun stopCollecting() {
+        serviceCollectors.forEach { it.cancel() }
+        serviceCollectors = emptyList()
     }
 
     fun bindToService() {
+        bind()
+    }
+
+    private fun bind() {
+        if (isBound) return
         val context = getApplication<VibeRunningApp>()
-        context.bindService(
+        // Track the binding from here, not onServiceConnected(), so an unbind
+        // before the connection completes still releases it.
+        isBound = context.bindService(
             Intent(context, LocationTrackingService::class.java),
             serviceConnection,
             Context.BIND_AUTO_CREATE
@@ -167,9 +182,6 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
     override fun onCleared() {
         super.onCleared()
         gpsMonitor.stopMonitoring()
-        if (isBound) {
-            getApplication<VibeRunningApp>().unbindService(serviceConnection)
-            isBound = false
-        }
+        unbind()
     }
 }

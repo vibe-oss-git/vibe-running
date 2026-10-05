@@ -15,7 +15,7 @@ Switch both to the platform `LocationManager` with `GPS_PROVIDER` and drop the d
 - Removes the only proprietary dependency: eligible for F-Droid, and the Play Services linking exception in `NOTICE` can be dropped
 
 **Notes**
-- Keep the existing 1s sampling interval and noise filters (accuracy >30m, speed >50m/s, jumps >100m)
+- Keep the existing 1s sampling interval and noise filters (accuracy >50m, speed >50m/s, jumps >100m)
 - `GpsStatusMonitor` can use `GnssStatus.Callback` (API 24+) for satellite count/fix state
 - Expect a slower first fix than the fused provider (no Wi-Fi/cell assist)
 - Test on a real device during an actual run: fix acquisition time, distance accuracy, background tracking, auto-pause
@@ -25,7 +25,7 @@ Switch both to the platform `LocationManager` with `GPS_PROVIDER` and drop the d
 Add a way to export activity history, profile data, and settings to a single file, and to import that file on another device, so moving to a new phone doesn't lose history or stats.
 
 **Why**
-- `android:allowBackup="false"` is set, so Android's backup and device-to-device transfer don't carry app data over. Today a new phone starts empty.
+- `android:allowBackup="false"` turns off cloud backup. According to Android's Auto Backup documentation, on Android 12+ it does not turn off device-to-device transfer, but whether that runs depends on the phone's migration tool, so it can't be relied on to move run history.
 - The existing KML export is per-activity and meant for Google Earth. It doesn't hold everything needed to rebuild an activity.
 
 **Notes**

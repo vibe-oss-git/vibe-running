@@ -19,6 +19,14 @@ class ActivityRepository(
 
     suspend fun updateActivity(activity: Activity) = activityDao.update(activity)
 
+    suspend fun updateProgress(
+        id: Long,
+        distanceMeters: Double,
+        durationMillis: Long,
+        maxSpeedMps: Double,
+        avgSpeedMps: Double
+    ) = activityDao.updateProgress(id, distanceMeters, durationMillis, maxSpeedMps, avgSpeedMps)
+
     suspend fun deleteActivity(id: Long) = activityDao.deleteById(id)
 
     fun observeCompletedActivities(): Flow<List<Activity>> = activityDao.observeCompleted()
