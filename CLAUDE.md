@@ -45,7 +45,7 @@ Manual construction in `VibeRunningApp` (Application subclass). Database singlet
 `KmlExporter` generates valid KML 2.2 with `gx:Track` extensions for Google Earth. Files go to cache dir, shared via `FileProvider` with scoped URI grants. The export is triggered from `ActivityDetailScreen` through `HistoryViewModel`.
 
 ### Navigation
-Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` as a pushed route. Routes defined as sealed class in `NavGraph.kt`.
+Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` and `Settings` as pushed routes. `Settings` is opened from a gear icon on the Profile tab. Routes defined as sealed class in `NavGraph.kt`.
 
 ## Key Constraints
 
@@ -53,7 +53,7 @@ Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Sta
 - **License** — GPL-3.0 only, with a Play Services linking exception in `NOTICE`. Planned work is tracked in `TODO.md`.
 - **GPS hardware required** — `uses-feature android:required="true"` in manifest.
 - **Min SDK 26** (Android 8.0) — no need for pre-Oreo compat.
-- **Units toggle** — imperial (default) or metric, stored in SharedPreferences. All internal calculations use meters/seconds; conversion happens at display time in `FormatUtils`.
+- **Units toggle** — imperial (default) or metric, stored in SharedPreferences and set on the Settings screen. All internal calculations use meters/seconds; conversion happens at display time in `FormatUtils`.
 
 ## Dependencies
 

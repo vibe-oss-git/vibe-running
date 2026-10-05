@@ -11,6 +11,17 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_USE_IMPERIAL, true)
         set(value) = prefs.edit().putBoolean(KEY_USE_IMPERIAL, value).apply()
 
+    // Minutes without movement before a run auto-pauses
+    var inactivityPauseMinutes: Int
+        get() = prefs.getInt(KEY_INACTIVITY_PAUSE_MINUTES, DEFAULT_INACTIVITY_PAUSE_MINUTES)
+        set(value) = prefs.edit().putInt(KEY_INACTIVITY_PAUSE_MINUTES, value).apply()
+
+    // Minutes without movement before a run is ended. Never less than the pause time.
+    var inactivityExitMinutes: Int
+        get() = prefs.getInt(KEY_INACTIVITY_EXIT_MINUTES, DEFAULT_INACTIVITY_EXIT_MINUTES)
+            .coerceAtLeast(inactivityPauseMinutes)
+        set(value) = prefs.edit().putInt(KEY_INACTIVITY_EXIT_MINUTES, value).apply()
+
     // Height in inches (stored internally, converted for display)
     var heightInches: Float
         get() = prefs.getFloat(KEY_HEIGHT_INCHES, 0f)
@@ -85,6 +96,12 @@ class PreferencesManager(context: Context) {
         private const val KEY_WEIGHT_UPDATED_AT = "weight_updated_at"
         private const val KEY_SEX = "sex"
         private const val KEY_DATE_OF_BIRTH = "date_of_birth"
+        private const val KEY_INACTIVITY_PAUSE_MINUTES = "inactivity_pause_minutes"
+        private const val KEY_INACTIVITY_EXIT_MINUTES = "inactivity_exit_minutes"
         const val WEIGHT_PROMPT_DAYS = 14
+        const val DEFAULT_INACTIVITY_PAUSE_MINUTES = 1
+        const val DEFAULT_INACTIVITY_EXIT_MINUTES = 2
+        val INACTIVITY_PAUSE_OPTIONS = listOf(1, 2, 3, 5)
+        val INACTIVITY_EXIT_OPTIONS = listOf(1, 2, 3, 5, 10, 15)
     }
 }

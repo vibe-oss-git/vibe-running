@@ -6,7 +6,7 @@ A private, fully offline GPS run tracker for Android. No accounts, no cloud, no 
 
 - **Live tracking** — duration, distance, pace, speed and max speed, with a persistent notification so tracking continues with the screen off
 - **Reliable in the background** — progress is saved every 30 seconds and the tracking service recovers if Android kills it
-- **Auto-pause** — pauses after 1 minute without movement, resumes when you move, and finishes the run after 2 minutes so a forgotten session doesn't drain your battery
+- **Auto-pause** — pauses after 1 minute without movement, resumes when you move, and finishes the run after 2 minutes so a forgotten session doesn't drain your battery (both times are configurable)
 - **Automatic lap detection** — laps are counted when you pass back near your starting point, with a lap splits table after the run
 - **Route map** — colored by speed or elevation, with pinch-to-zoom and a speed range filter
 - **Stats** — personal records (top speed, longest distance, best pace, longest run), lifetime totals, and per-activity trend charts

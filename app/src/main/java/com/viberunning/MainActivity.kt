@@ -37,6 +37,7 @@ import com.viberunning.ui.screens.ActivityDetailScreen
 import com.viberunning.ui.screens.HistoryScreen
 import com.viberunning.ui.screens.HomeScreen
 import com.viberunning.ui.screens.ProfileScreen
+import com.viberunning.ui.screens.SettingsScreen
 import com.viberunning.ui.screens.StatsScreen
 import com.viberunning.ui.theme.VibeRunningTheme
 import com.viberunning.viewmodel.HistoryViewModel
@@ -188,6 +189,7 @@ fun VibeRunningNavHost() {
                 ProfileScreen(
                     preferencesManager = prefs,
                     useImperial = useImperial,
+                    onOpenSettings = { navController.navigate(Screen.Settings.route) },
                     onProfileSaved = {
                         if (navController.previousBackStackEntry == null) {
                             // First-launch: navigate to Home
@@ -198,6 +200,18 @@ fun VibeRunningNavHost() {
                             navController.popBackStack()
                         }
                     }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    preferencesManager = prefs,
+                    useImperial = useImperial,
+                    onToggleUnits = { imperial ->
+                        useImperial = imperial
+                        prefs.useImperial = imperial
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 

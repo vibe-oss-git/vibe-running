@@ -19,7 +19,3 @@ Switch both to the platform `LocationManager` with `GPS_PROVIDER` and drop the d
 - `GpsStatusMonitor` can use `GnssStatus.Callback` (API 24+) for satellite count/fix state
 - Expect a slower first fix than the fused provider (no Wi-Fi/cell assist)
 - Test on a real device during an actual run: fix acquisition time, distance accuracy, background tracking, auto-pause
-
-## Make the length of the inactivity timer customizable
-
-Currently the inactivity timer automatically exits the run after 2 minutes of inactivity. This works fine for where I run, it may not for you.
