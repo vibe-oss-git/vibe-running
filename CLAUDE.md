@@ -33,7 +33,7 @@ MVVM with these layers:
 **Room DB → Repository → ViewModel → UI** for persisted data
 
 ### Tracking flow
-`LocationTrackingService` is a bound foreground service using `FusedLocationProviderClient`. It samples GPS every 3s, filters noise (accuracy >30m, speed >50m/s, distance jumps >100m), calculates running totals, and persists `LocationPoint` rows via the repository. It exposes `StateFlow<TrackingState>` that `TrackingViewModel` collects by binding to the service via `ServiceConnection`.
+`LocationTrackingService` is a bound foreground service using `FusedLocationProviderClient`. It samples GPS every 1s, filters noise (accuracy >30m, speed >50m/s, distance jumps >100m), calculates running totals, and persists `LocationPoint` rows via the repository. It exposes `StateFlow<TrackingState>` that `TrackingViewModel` collects by binding to the service via `ServiceConnection`.
 
 ### Data persistence
 Room database (`vibe_running.db`) with two tables: `activities` (run sessions) and `location_points` (GPS breadcrumbs, foreign key to activity with CASCADE delete). `ActivityRepository` is the single access point — it provides both suspend functions and Flow-based reactive queries. Stats (top speed, longest distance, best pace) are computed via Room aggregation queries, not in-memory.

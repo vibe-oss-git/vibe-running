@@ -15,7 +15,7 @@ Switch both to the platform `LocationManager` with `GPS_PROVIDER` and drop the d
 - Removes the only proprietary dependency: eligible for F-Droid, and the Play Services linking exception in `NOTICE` can be dropped
 
 **Notes**
-- Keep the existing 3s sampling interval and noise filters (accuracy >30m, speed >50m/s, jumps >100m)
+- Keep the existing 1s sampling interval and noise filters (accuracy >30m, speed >50m/s, jumps >100m)
 - `GpsStatusMonitor` can use `GnssStatus.Callback` (API 24+) for satellite count/fix state
 - Expect a slower first fix than the fused provider (no Wi-Fi/cell assist)
 - Test on a real device during an actual run: fix acquisition time, distance accuracy, background tracking, auto-pause
