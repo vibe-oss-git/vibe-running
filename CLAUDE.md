@@ -33,7 +33,7 @@ MVVM with these layers:
 **Room DB → Repository → ViewModel → UI** for persisted data
 
 ### Tracking flow
-`LocationTrackingService` is a bound foreground service using `FusedLocationProviderClient`. It samples GPS every 3s, filters noise (accuracy >30m, speed >50m/s, distance jumps >100m), calculates running totals, and persists `LocationPoint` rows via the repository. It exposes `StateFlow<TrackingState>` that `TrackingViewModel` collects by binding to the service via `ServiceConnection`.
+`LocationTrackingService` is a bound foreground service using `FusedLocationProviderClient`. It samples GPS every 1s, filters noise (accuracy >30m, speed >50m/s, distance jumps >100m), calculates running totals, and persists `LocationPoint` rows via the repository. It exposes `StateFlow<TrackingState>` that `TrackingViewModel` collects by binding to the service via `ServiceConnection`.
 
 ### Data persistence
 Room database (`vibe_running.db`) with two tables: `activities` (run sessions) and `location_points` (GPS breadcrumbs, foreign key to activity with CASCADE delete). `ActivityRepository` is the single access point — it provides both suspend functions and Flow-based reactive queries. Stats (top speed, longest distance, best pace) are computed via Room aggregation queries, not in-memory.
@@ -45,7 +45,7 @@ Manual construction in `VibeRunningApp` (Application subclass). Database singlet
 `KmlExporter` generates valid KML 2.2 with `gx:Track` extensions for Google Earth. Files go to cache dir, shared via `FileProvider` with scoped URI grants. The export is triggered from `ActivityDetailScreen` through `HistoryViewModel`.
 
 ### Navigation
-Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` as a pushed route. Routes defined as sealed class in `NavGraph.kt`.
+Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` and `Settings` as pushed routes. `Settings` is opened from a gear icon on the Profile tab. Routes defined as sealed class in `NavGraph.kt`.
 
 ## Key Constraints
 
@@ -53,7 +53,7 @@ Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Sta
 - **License** — GPL-3.0 only, with a Play Services linking exception in `NOTICE`. Planned work is tracked in `TODO.md`.
 - **GPS hardware required** — `uses-feature android:required="true"` in manifest.
 - **Min SDK 26** (Android 8.0) — no need for pre-Oreo compat.
-- **Units toggle** — imperial (default) or metric, stored in SharedPreferences. All internal calculations use meters/seconds; conversion happens at display time in `FormatUtils`.
+- **Units toggle** — imperial (default) or metric, stored in SharedPreferences and set on the Settings screen. All internal calculations use meters/seconds; conversion happens at display time in `FormatUtils`.
 
 ## Dependencies
 

@@ -24,6 +24,7 @@ import com.viberunning.data.model.LocationPoint
 import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.FormatUtils
 import com.viberunning.util.LapDetector
+import com.viberunning.util.PreferencesManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,6 +54,8 @@ class LocationTrackingService : Service() {
     private var isAutoPaused = false
     private var lastSaveTime = 0L
     private var lastMovementTime = 0L
+    private var inactivityPauseMs = PreferencesManager.DEFAULT_INACTIVITY_PAUSE_MINUTES * 60_000L
+    private var inactivityExitMs = PreferencesManager.DEFAULT_INACTIVITY_EXIT_MINUTES * 60_000L
 
     private var startLatitude = 0.0
     private var startLongitude = 0.0
@@ -140,6 +143,7 @@ class LocationTrackingService : Service() {
             isAutoPaused = false
             lastLocation = null
             lastMovementTime = System.currentTimeMillis()
+            loadInactivitySettings()
             _isTracking.value = true
 
             val notification = buildNotification("Resuming...", "Recovering activity")
@@ -152,6 +156,7 @@ class LocationTrackingService : Service() {
                 while (_isTracking.value) {
                     updateState()
                     periodicSave()
+                    checkInactivity()
                     kotlinx.coroutines.delay(1000)
                 }
             }
@@ -170,6 +175,7 @@ class LocationTrackingService : Service() {
         isAutoPaused = false
         lastSaveTime = System.currentTimeMillis()
         lastMovementTime = System.currentTimeMillis()
+        loadInactivitySettings()
         startLatitude = 0.0
         startLongitude = 0.0
         lapCount = 0
@@ -315,15 +321,22 @@ class LocationTrackingService : Service() {
         updateNotification(elapsed.coerceAtLeast(0))
     }
 
+    // Read once per run; changes in Settings apply to the next run.
+    private fun loadInactivitySettings() {
+        val prefs = (application as VibeRunningApp).preferencesManager
+        inactivityPauseMs = prefs.inactivityPauseMinutes * 60_000L
+        inactivityExitMs = prefs.inactivityExitMinutes * 60_000L
+    }
+
     private fun checkInactivity() {
         if (!_isTracking.value) return
         val idleMs = System.currentTimeMillis() - lastMovementTime
-        if (!isAutoPaused && !isPaused && idleMs >= INACTIVITY_PAUSE_MS) {
-            // Auto-pause after a minute of no movement and save progress
+        if (!isAutoPaused && !isPaused && idleMs >= inactivityPauseMs) {
+            // Auto-pause after the configured time with no movement and save progress
             isAutoPaused = true
             pauseTracking()
             saveCurrentState()
-        } else if (isAutoPaused && idleMs >= INACTIVITY_EXIT_MS) {
+        } else if (isAutoPaused && idleMs >= inactivityExitMs) {
             // Still idle — user likely forgot to stop. Finalize and exit.
             autoStopAndExit()
         }
@@ -487,13 +500,14 @@ class LocationTrackingService : Service() {
     }
 
     private fun updateNotification(elapsedMillis: Long) {
-        val distance = FormatUtils.formatDistance(totalDistanceMeters, useImperial = true)
+        val useImperial = (application as VibeRunningApp).preferencesManager.useImperial
+        val distance = FormatUtils.formatDistance(totalDistanceMeters, useImperial)
         val duration = FormatUtils.formatDuration(elapsedMillis)
         val pace = FormatUtils.formatPace(
             if (elapsedMillis > 0) totalDistanceMeters / (elapsedMillis / 1000.0) else 0.0,
-            useImperial = true
+            useImperial
         )
-        val speed = FormatUtils.formatSpeed(lastLocation?.speed?.toDouble() ?: 0.0, useImperial = true)
+        val speed = FormatUtils.formatSpeed(lastLocation?.speed?.toDouble() ?: 0.0, useImperial)
         val status = if (isPaused) " (PAUSED)" else ""
         val title = "$duration$status"
         val detail = "$distance  |  Pace: $pace  |  Speed: $speed"
@@ -519,7 +533,5 @@ class LocationTrackingService : Service() {
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
         private const val SAVE_INTERVAL_MS = 30_000L
         private const val MOVEMENT_THRESHOLD_METERS = 3.0
-        private const val INACTIVITY_PAUSE_MS = 60_000L
-        private const val INACTIVITY_EXIT_MS = 120_000L
     }
 }

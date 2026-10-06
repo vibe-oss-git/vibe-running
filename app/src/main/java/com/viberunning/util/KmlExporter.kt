@@ -23,11 +23,12 @@ object KmlExporter {
     fun exportToKml(
         context: Context,
         activity: Activity,
-        points: List<LocationPoint>
+        points: List<LocationPoint>,
+        useImperial: Boolean
     ): Uri? {
         if (points.isEmpty()) return null
 
-        val kml = buildKmlString(activity, points)
+        val kml = buildKmlString(activity, points, useImperial)
 
         val exportDir = File(context.cacheDir, "exports")
         exportDir.mkdirs()
@@ -51,9 +52,9 @@ object KmlExporter {
         }
     }
 
-    private fun buildKmlString(activity: Activity, points: List<LocationPoint>): String {
+    private fun buildKmlString(activity: Activity, points: List<LocationPoint>, useImperial: Boolean): String {
         val startDate = FormatUtils.formatDateTime(activity.startTime)
-        val distance = FormatUtils.formatDistance(activity.distanceMeters, useImperial = true)
+        val distance = FormatUtils.formatDistance(activity.distanceMeters, useImperial)
         val duration = FormatUtils.formatDuration(activity.durationMillis)
 
         val sb = StringBuilder()

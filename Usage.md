@@ -49,6 +49,8 @@ Tap the large **PAUSE** button (left side) to pause tracking. The timer stops an
 ### Automatic Inactivity Pause
 If you stop moving for **1 minute** (e.g., you stop to wait at a crosswalk, or you forget to stop the app), tracking automatically pauses and your progress is saved. If you start moving again, tracking resumes automatically. If you remain stationary for another minute (**2 minutes total** of no movement), the app finalizes the activity, stops the tracking service, and exits, so you don't burn battery if you forgot to stop.
 
+Both times can be changed in Settings (see [Inactivity Timers](#inactivity-timers)). If Android stops the tracking service and it restarts mid-run, the inactivity timers start counting again from the restart.
+
 ### Stopping
 Tap the large red **STOP** button (right side). A full-screen confirmation appears with three options, spread vertically:
 - **Stop Without Saving** (top) — stops tracking and permanently discards the activity.
@@ -217,11 +219,21 @@ For the most accurate estimates, keep your weight and date of birth up to date i
 
 ## Settings
 
+Open Settings from the gear icon at the top right of the **Profile** tab.
+
 ### Switching Units
 The app defaults to **imperial** units (miles, mph, min/mi). To switch to **metric** (kilometers, km/h, min/km):
+- Turn off **Use Imperial Units** in Settings.
 - The unit preference is stored locally and persists across app restarts.
 
 All internal measurements use meters and seconds — unit conversion is applied only at display time, so switching units does not affect your saved data.
+
+### Inactivity Timers
+Two settings control the [automatic inactivity pause](#automatic-inactivity-pause). Both count time since you last moved:
+- **Auto-pause after** — 1 (default), 2, 3, or 5 minutes.
+- **End run after** — 1, 2 (default), 3, 5, 10, or 15 minutes. This can't be shorter than the auto-pause time; choices below it are disabled, and raising the auto-pause time above it raises this setting to match.
+
+Changes apply from your next run, not a run in progress.
 
 ---
 
