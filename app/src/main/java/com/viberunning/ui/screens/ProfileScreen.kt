@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.viberunning.util.FormatUtils
 import com.viberunning.util.PreferencesManager
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -78,12 +79,7 @@ fun ProfileScreen(
 
     // Weight field
     var weightText by remember {
-        mutableStateOf(
-            if (currentWeightLbs > 0) {
-                if (useImperial) currentWeightLbs.toInt().toString()
-                else (currentWeightLbs * 0.453592f).toInt().toString()
-            } else ""
-        )
+        mutableStateOf(FormatUtils.weightInputText(currentWeightLbs, useImperial))
     }
 
     Column(
@@ -256,7 +252,7 @@ fun ProfileScreen(
 
         OutlinedTextField(
             value = weightText,
-            onValueChange = { weightText = it.filter { c -> c.isDigit() || c == '.' }.take(6) },
+            onValueChange = { weightText = FormatUtils.filterWeightInput(it) },
             label = { Text(if (useImperial) "Pounds (lbs)" else "Kilograms (kg)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
@@ -321,12 +317,7 @@ fun ProfileScreen(
                     cm / 2.54f
                 }
 
-                val lbs = if (useImperial) {
-                    weightText.toFloatOrNull() ?: 0f
-                } else {
-                    val kg = weightText.toFloatOrNull() ?: 0f
-                    kg / 0.453592f
-                }
+                val lbs = FormatUtils.parseWeightToLbs(weightText, useImperial) ?: 0f
 
                 if (totalInches > 0f) preferencesManager.heightInches = totalInches
                 if (lbs > 0f) preferencesManager.weightLbs = lbs

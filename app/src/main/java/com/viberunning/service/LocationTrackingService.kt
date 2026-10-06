@@ -7,8 +7,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.location.Location
 import android.os.Binder
+import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -25,6 +27,7 @@ import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.FormatUtils
 import com.viberunning.util.LapDetector
 import com.viberunning.util.PreferencesManager
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,7 +41,12 @@ import kotlinx.coroutines.runBlocking
 class LocationTrackingService : Service() {
 
     private val binder = TrackingBinder()
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Main dispatcher: tracking state is only touched from the main thread, the same
+    // thread location callbacks arrive on. Room's suspend functions do their own I/O.
+    private val serviceScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main +
+            CoroutineExceptionHandler { _, e -> Log.e(TAG, "Tracking coroutine failed", e) }
+    )
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
@@ -54,6 +62,8 @@ class LocationTrackingService : Service() {
     private var isAutoPaused = false
     private var lastSaveTime = 0L
     private var lastMovementTime = 0L
+    // Last position where movement was detected; inactivity is measured from here
+    private var movementAnchor: Location? = null
     private var inactivityPauseMs = PreferencesManager.DEFAULT_INACTIVITY_PAUSE_MINUTES * 60_000L
     private var inactivityExitMs = PreferencesManager.DEFAULT_INACTIVITY_EXIT_MINUTES * 60_000L
 
@@ -77,7 +87,6 @@ class LocationTrackingService : Service() {
         val maxSpeedMps: Double = 0.0,
         val avgSpeedMps: Double = 0.0,
         val isPaused: Boolean = false,
-        val pointCount: Int = 0,
         val lapCount: Int = 0,
         val currentLapDistanceMeters: Double = 0.0
     )
@@ -106,14 +115,42 @@ class LocationTrackingService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val activityId = intent.getLongExtra(EXTRA_ACTIVITY_ID, -1)
-                if (activityId != -1L) startTracking(activityId)
+                if (_isTracking.value) {
+                    // Duplicate start (e.g. double tap). Keep the current run, but still
+                    // satisfy startForegroundService()'s requirement to call startForeground().
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildNotification("Tracking", "Activity in progress"),
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                    )
+                } else if (activityId != -1L) {
+                    startTracking(activityId)
+                }
             }
-            ACTION_PAUSE -> pauseTracking()
-            ACTION_RESUME -> resumeTracking()
+            ACTION_PAUSE -> {
+                if (_isTracking.value) {
+                    isAutoPaused = false
+                    pauseTracking()
+                }
+            }
+            ACTION_RESUME -> {
+                if (_isTracking.value) {
+                    isAutoPaused = false
+                    resumeTracking()
+                    // Don't count distance covered while paused
+                    lastLocation = null
+                    movementAnchor = null
+                    lastMovementTime = System.currentTimeMillis()
+                }
+            }
             ACTION_STOP -> stopTracking()
+            ACTION_DISCARD -> stopTracking(
+                discardActivityId = intent.getLongExtra(EXTRA_ACTIVITY_ID, currentActivityId)
+            )
             else -> {
                 // Service restarted by system (START_STICKY) — try to recover
                 if (!_isTracking.value) {
+                    isActive = true
                     recoverInProgressActivity()
                 }
             }
@@ -125,6 +162,7 @@ class LocationTrackingService : Service() {
         serviceScope.launch {
             val app = application as VibeRunningApp
             val activity = app.repository.getInProgressActivity() ?: run {
+                isActive = false
                 stopSelf()
                 return@launch
             }
@@ -142,6 +180,7 @@ class LocationTrackingService : Service() {
             isPaused = false
             isAutoPaused = false
             lastLocation = null
+            movementAnchor = null
             lastMovementTime = System.currentTimeMillis()
             loadInactivitySettings()
             _isTracking.value = true
@@ -165,10 +204,12 @@ class LocationTrackingService : Service() {
 
     @Suppress("MissingPermission")
     private fun startTracking(activityId: Long) {
+        isActive = true
         currentActivityId = activityId
         totalDistanceMeters = 0.0
         maxSpeedMps = 0.0
         lastLocation = null
+        movementAnchor = null
         trackingStartTime = System.currentTimeMillis()
         pausedDuration = 0L
         isPaused = false
@@ -220,45 +261,59 @@ class LocationTrackingService : Service() {
         // Filter out inaccurate readings
         if (location.accuracy > MAX_ACCURACY_METERS) return
 
+        val now = System.currentTimeMillis()
+        val previous = lastLocation
+        val distance = previous?.distanceTo(location)?.toDouble() ?: 0.0
+
         val speed = if (location.hasSpeed() && location.speed > 0.2f) {
             location.speed.toDouble()
-        } else if (lastLocation != null) {
-            val timeDelta = (location.time - lastLocation!!.time) / 1000.0
-            if (timeDelta > 0) {
-                val dist = lastLocation!!.distanceTo(location).toDouble()
-                dist / timeDelta
-            } else 0.0
+        } else if (previous != null) {
+            val timeDelta = (location.time - previous.time) / 1000.0
+            if (timeDelta > 0) distance / timeDelta else 0.0
         } else 0.0
 
-        if (lastLocation != null) {
-            val distance = lastLocation!!.distanceTo(location).toDouble()
-            // Only count distance if speed is reasonable (< 50 m/s ~= 112 mph)
-            // and distance is reasonable to filter GPS jumps
-            if (distance < MAX_SINGLE_DISTANCE_METERS && speed < MAX_REASONABLE_SPEED_MPS) {
-                totalDistanceMeters += distance
-                // Real movement — reset the inactivity timer
-                if (distance > MOVEMENT_THRESHOLD_METERS) {
-                    lastMovementTime = System.currentTimeMillis()
-                    // If we were auto-paused and the user started moving again,
-                    // resume automatically.
-                    if (isAutoPaused) {
-                        isAutoPaused = false
-                        resumeTracking()
-                    }
-                }
-            }
-        } else {
-            // First fix — record start position for lap detection
-            startLatitude = location.latitude
-            startLongitude = location.longitude
-            lastMovementTime = System.currentTimeMillis()
-        }
+        // Reject GPS jumps: unreasonable speed (>= 50 m/s ~= 112 mph) or a single
+        // step that's too long. Rejected steps add no distance and don't set max speed.
+        val plausible = speed < MAX_REASONABLE_SPEED_MPS && distance < MAX_SINGLE_DISTANCE_METERS
 
-        if (speed > maxSpeedMps && speed < MAX_REASONABLE_SPEED_MPS) {
-            maxSpeedMps = speed
+        // Movement is measured from an anchor rather than step to step. At 1s
+        // sampling a runner covers only a few meters per fix, so a per-step
+        // threshold would miss slow running and walking.
+        val anchor = movementAnchor
+        if (anchor == null) {
+            movementAnchor = location
+            lastMovementTime = now
+        } else if (plausible && anchor.distanceTo(location) > MOVEMENT_THRESHOLD_METERS) {
+            // Real movement — reset the inactivity timer
+            movementAnchor = location
+            lastMovementTime = now
+            // If we were auto-paused and the user started moving again,
+            // resume automatically.
+            if (isAutoPaused) {
+                isAutoPaused = false
+                resumeTracking()
+            }
         }
 
         lastLocation = location
+
+        // While auto-paused, GPS jitter around a stationary position must not
+        // add distance or points.
+        if (isAutoPaused) return
+
+        if (previous == null) {
+            // First fix — record start position for lap detection
+            if (startLatitude == 0.0) {
+                startLatitude = location.latitude
+                startLongitude = location.longitude
+            }
+        } else if (plausible) {
+            totalDistanceMeters += distance
+        }
+
+        if (plausible && speed > maxSpeedMps) {
+            maxSpeedMps = speed
+        }
 
         if (startLatitude != 0.0) {
             val (newLapCount, insideNow, newLastLapDist) = LapDetector.detectLapCount(
@@ -313,7 +368,6 @@ class LocationTrackingService : Service() {
             maxSpeedMps = maxSpeedMps,
             avgSpeedMps = avgSpeed,
             isPaused = isPaused,
-            pointCount = _trackingState.value.pointCount + 1,
             lapCount = lapCount,
             currentLapDistanceMeters = totalDistanceMeters - lastLapDistance
         )
@@ -339,18 +393,22 @@ class LocationTrackingService : Service() {
         } else if (isAutoPaused && idleMs >= inactivityExitMs) {
             // Still idle — user likely forgot to stop. Finalize and exit.
             autoStopAndExit()
+        } else if (isPaused && !isAutoPaused &&
+            System.currentTimeMillis() - pauseStartTime >= MANUAL_PAUSE_LIMIT_MS
+        ) {
+            // Paused by the user and never resumed — save the run. The app stays open.
+            stopTracking()
         }
     }
 
     private fun autoStopAndExit() {
-        // Clear auto-pause so stopTracking() accounts duration correctly.
-        // pausedDuration already accumulates on resume, but we're exiting —
-        // just stop and let stopTracking() snapshot the current paused state.
-        stopTracking()
-        // Kill the process shortly after so the app fully exits as requested.
-        serviceScope.launch {
-            kotlinx.coroutines.delay(500)
-            android.os.Process.killProcess(android.os.Process.myPid())
+        // stopTracking() snapshots the duration as of the auto-pause.
+        // Kill the process once the run is saved so the app fully exits. Posted to a
+        // Handler rather than serviceScope, which onDestroy() cancels.
+        stopTracking {
+            Handler(Looper.getMainLooper()).postDelayed({
+                android.os.Process.killProcess(android.os.Process.myPid())
+            }, 500)
         }
     }
 
@@ -365,16 +423,15 @@ class LocationTrackingService : Service() {
     private fun saveCurrentState() {
         if (currentActivityId == -1L) return
         val state = _trackingState.value
+        val activityId = currentActivityId
         serviceScope.launch {
             val app = application as VibeRunningApp
-            val activity = app.repository.getActivity(currentActivityId) ?: return@launch
-            app.repository.updateActivity(
-                activity.copy(
-                    distanceMeters = state.distanceMeters,
-                    durationMillis = state.durationMillis,
-                    maxSpeedMps = state.maxSpeedMps,
-                    avgSpeedMps = state.avgSpeedMps
-                )
+            app.repository.updateProgress(
+                activityId,
+                state.distanceMeters,
+                state.durationMillis,
+                state.maxSpeedMps,
+                state.avgSpeedMps
             )
         }
     }
@@ -385,14 +442,12 @@ class LocationTrackingService : Service() {
         try {
             runBlocking {
                 val app = application as VibeRunningApp
-                val activity = app.repository.getActivity(currentActivityId) ?: return@runBlocking
-                app.repository.updateActivity(
-                    activity.copy(
-                        distanceMeters = state.distanceMeters,
-                        durationMillis = state.durationMillis,
-                        maxSpeedMps = state.maxSpeedMps,
-                        avgSpeedMps = state.avgSpeedMps
-                    )
+                app.repository.updateProgress(
+                    currentActivityId,
+                    state.distanceMeters,
+                    state.durationMillis,
+                    state.maxSpeedMps,
+                    state.avgSpeedMps
                 )
             }
         } catch (_: Exception) {
@@ -401,6 +456,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun pauseTracking() {
+        if (isPaused) return
         isPaused = true
         pauseStartTime = System.currentTimeMillis()
         _trackingState.value = _trackingState.value.copy(isPaused = true)
@@ -414,10 +470,18 @@ class LocationTrackingService : Service() {
         }
     }
 
-    private fun stopTracking() {
+    /**
+     * Ends the run. The final save (or the delete, for a discarded run) finishes
+     * before the service stops itself, so onDestroy() cancelling serviceScope
+     * can't cut it short. [onFinished] runs after that.
+     */
+    private fun stopTracking(discardActivityId: Long = -1L, onFinished: () -> Unit = {}) {
+        val wasTracking = _isTracking.value
         fusedLocationClient.removeLocationUpdates(locationCallback)
         _isTracking.value = false
+        isActive = false
 
+        val activityId = currentActivityId
         val elapsed = if (isPaused) {
             pauseStartTime - trackingStartTime - pausedDuration
         } else {
@@ -427,36 +491,45 @@ class LocationTrackingService : Service() {
         val avgSpeed = if (elapsed > 0) {
             totalDistanceMeters / (elapsed / 1000.0)
         } else 0.0
+        val distance = totalDistanceMeters
+        val maxSpeed = maxSpeedMps
 
         serviceScope.launch {
             val app = application as VibeRunningApp
-            val prefs = app.preferencesManager
-            val calories = CalorieEstimator.estimate(
-                avgSpeedMps = avgSpeed,
-                durationMillis = elapsed,
-                weightLbs = prefs.weightLbs,
-                heightInches = prefs.heightInches,
-                ageYears = prefs.ageYears,
-                isMale = prefs.sex == "male"
-            )
-            val activity = app.repository.getActivity(currentActivityId)
-            activity?.let {
-                app.repository.updateActivity(
-                    it.copy(
-                        endTime = System.currentTimeMillis(),
-                        distanceMeters = totalDistanceMeters,
-                        durationMillis = elapsed,
-                        maxSpeedMps = maxSpeedMps,
+            try {
+                if (discardActivityId != -1L) {
+                    app.repository.deleteActivity(discardActivityId)
+                } else if (wasTracking && activityId != -1L) {
+                    val prefs = app.preferencesManager
+                    val calories = CalorieEstimator.estimate(
                         avgSpeedMps = avgSpeed,
-                        caloriesBurned = calories,
-                        status = Activity.STATUS_COMPLETED
+                        durationMillis = elapsed,
+                        weightLbs = prefs.weightLbs,
+                        heightInches = prefs.heightInches,
+                        ageYears = prefs.ageYears,
+                        isMale = prefs.sex == "male"
                     )
-                )
+                    val activity = app.repository.getActivity(activityId)
+                    activity?.let {
+                        app.repository.updateActivity(
+                            it.copy(
+                                endTime = System.currentTimeMillis(),
+                                distanceMeters = distance,
+                                durationMillis = elapsed,
+                                maxSpeedMps = maxSpeed,
+                                avgSpeedMps = avgSpeed,
+                                caloriesBurned = calories,
+                                status = Activity.STATUS_COMPLETED
+                            )
+                        )
+                    }
+                }
+            } finally {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                onFinished()
             }
         }
-
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -473,6 +546,7 @@ class LocationTrackingService : Service() {
             fusedLocationClient.removeLocationUpdates(locationCallback)
             saveCurrentStateBlocking()
         }
+        isActive = false
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -500,6 +574,8 @@ class LocationTrackingService : Service() {
     }
 
     private fun updateNotification(elapsedMillis: Long) {
+        // Don't re-post the notification after tracking has stopped
+        if (!_isTracking.value) return
         val useImperial = (application as VibeRunningApp).preferencesManager.useImperial
         val distance = FormatUtils.formatDistance(totalDistanceMeters, useImperial)
         val duration = FormatUtils.formatDuration(elapsedMillis)
@@ -518,12 +594,23 @@ class LocationTrackingService : Service() {
     }
 
     companion object {
+        /**
+         * True while a service instance in this process is tracking or recovering a run.
+         * It resets when the process dies, so an in-progress activity found while this is
+         * false was interrupted and nothing is recording it.
+         */
+        @Volatile
+        var isActive = false
+            private set
+
         const val ACTION_START = "ACTION_START"
         const val ACTION_PAUSE = "ACTION_PAUSE"
         const val ACTION_RESUME = "ACTION_RESUME"
         const val ACTION_STOP = "ACTION_STOP"
+        const val ACTION_DISCARD = "ACTION_DISCARD"
         const val EXTRA_ACTIVITY_ID = "EXTRA_ACTIVITY_ID"
         const val NOTIFICATION_ID = 1
+        private const val TAG = "LocationTracking"
 
         private const val GPS_INTERVAL_MS = 1000L
         private const val GPS_FASTEST_INTERVAL_MS = 500L
@@ -532,6 +619,7 @@ class LocationTrackingService : Service() {
         private const val MAX_SINGLE_DISTANCE_METERS = 100.0
         private const val MAX_REASONABLE_SPEED_MPS = 50.0
         private const val SAVE_INTERVAL_MS = 30_000L
-        private const val MOVEMENT_THRESHOLD_METERS = 3.0
+        private const val MOVEMENT_THRESHOLD_METERS = 10.0
+        private const val MANUAL_PAUSE_LIMIT_MS = 60 * 60_000L
     }
 }

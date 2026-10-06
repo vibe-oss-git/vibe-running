@@ -9,6 +9,7 @@ import com.viberunning.VibeRunningApp
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
 import com.viberunning.util.KmlExporter
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,14 +30,27 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedActivityPoints = MutableStateFlow<List<LocationPoint>>(emptyList())
     val selectedActivityPoints: StateFlow<List<LocationPoint>> = _selectedActivityPoints.asStateFlow()
 
+    private var loadJobs: List<Job> = emptyList()
+
+    // Observes rather than reads once: after Stop & Save the detail screen opens
+    // before the service has written the final values, and updates when it does.
     fun loadActivity(id: Long) {
-        viewModelScope.launch {
-            _selectedActivity.value = repository.getActivity(id)
-            _selectedActivityPoints.value = repository.getLocationPoints(id)
-        }
+        loadJobs.forEach { it.cancel() }
+        _selectedActivity.value = null
+        _selectedActivityPoints.value = emptyList()
+        loadJobs = listOf(
+            viewModelScope.launch {
+                repository.observeActivity(id).collect { _selectedActivity.value = it }
+            },
+            viewModelScope.launch {
+                repository.observeLocationPoints(id).collect { _selectedActivityPoints.value = it }
+            }
+        )
     }
 
     fun deleteActivity(id: Long) {
+        loadJobs.forEach { it.cancel() }
+        loadJobs = emptyList()
         viewModelScope.launch {
             repository.deleteActivity(id)
             _selectedActivity.value = null

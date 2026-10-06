@@ -32,7 +32,7 @@ The START button is disabled until GPS reaches the "Ready" state.
 1. Open the app — you land on the **Run** tab.
 2. Wait for the GPS status to show **GPS Ready**.
 3. Tap the large green **START** button.
-4. A persistent notification appears showing the running timer, distance, pace, and speed. You can now lock your screen or switch apps — tracking continues in the background. The notification updates every second. Your progress is saved to the database every 30 seconds, so even if the system kills the app under memory pressure, at most 30 seconds of data is lost. If the app is swiped from recents, the tracking service continues running independently. If the system kills the service, it automatically restarts and resumes tracking. When you reopen the app, it reconnects to the running service and displays your live stats.
+4. A persistent notification appears showing the running timer, distance, pace, and speed. You can now lock your screen or switch apps — tracking continues in the background. The notification updates every second. Your progress is saved to the database every 30 seconds, so even if the system kills the app under memory pressure, at most 30 seconds of data is lost. If the app is swiped from recents, the tracking service continues running independently. If the system kills the service, it usually restarts automatically and resumes tracking. When you reopen the app, it reconnects to the running service and displays your live stats. If the service did not restart, the app asks whether to **Save** what was recorded or **Discard** the run.
 
 ### During a Run
 The screen displays real-time stats:
@@ -44,7 +44,7 @@ The screen displays real-time stats:
 - **Laps / Current Lap** — appears automatically when you complete a lap (pass within 30m of your starting point after covering at least 200m)
 
 ### Pausing and Resuming
-Tap the large **PAUSE** button (left side) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused. Tap **RESUME** to continue.
+Tap the large **PAUSE** button (left side) to pause tracking. The timer stops and "PAUSED" appears on screen. GPS data is not recorded while paused, and distance you cover while paused is not counted. Tap **RESUME** to continue. If a run stays paused for **1 hour**, it is saved and tracking stops automatically.
 
 ### Automatic Inactivity Pause
 If you stop moving for **1 minute** (e.g., you stop to wait at a crosswalk, or you forget to stop the app), tracking automatically pauses and your progress is saved. If you start moving again, tracking resumes automatically. If you remain stationary for another minute (**2 minutes total** of no movement), the app finalizes the activity, stops the tracking service, and exits, so you don't burn battery if you forgot to stop.
@@ -142,7 +142,7 @@ Tap the **Stats** tab to see your all-time records and totals.
 ### Personal Records
 - **Top Speed** — fastest instantaneous speed across all runs
 - **Longest Distance** — single run with the most distance
-- **Best Pace** — run with the fastest average pace
+- **Best Pace** — run with the fastest average pace (runs shorter than 1 minute are not counted)
 - **Longest Run** — run with the greatest duration
 
 Tap any personal record card to view the activity where that record was set.
@@ -182,7 +182,7 @@ Tap the date picker to select your date of birth. Age is used in the BMR calcula
 
 ### Height & Weight
 - Enter your height in feet/inches (imperial) or centimeters (metric)
-- Enter your weight in pounds (imperial) or kilograms (metric)
+- Enter your weight in pounds (imperial) or kilograms (metric), to one decimal place
 - All values are stored locally on your device
 
 ### BMI

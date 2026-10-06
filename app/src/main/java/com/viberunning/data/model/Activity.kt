@@ -17,7 +17,6 @@ data class Activity(
 ) {
     companion object {
         const val STATUS_IN_PROGRESS = "in_progress"
-        const val STATUS_PAUSED = "paused"
         const val STATUS_COMPLETED = "completed"
     }
 }

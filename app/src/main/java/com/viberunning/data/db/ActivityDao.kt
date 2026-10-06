@@ -16,6 +16,21 @@ interface ActivityDao {
     @Update
     suspend fun update(activity: Activity)
 
+    // Only touches runs still in progress, so a late periodic save can't
+    // overwrite the final values or status of a completed run.
+    @Query(
+        "UPDATE activities SET distanceMeters = :distanceMeters, durationMillis = :durationMillis, " +
+            "maxSpeedMps = :maxSpeedMps, avgSpeedMps = :avgSpeedMps " +
+            "WHERE id = :id AND status = 'in_progress'"
+    )
+    suspend fun updateProgress(
+        id: Long,
+        distanceMeters: Double,
+        durationMillis: Long,
+        maxSpeedMps: Double,
+        avgSpeedMps: Double
+    )
+
     @Query("SELECT * FROM activities WHERE id = :id")
     suspend fun getById(id: Long): Activity?
 
@@ -24,9 +39,6 @@ interface ActivityDao {
 
     @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY startTime DESC")
     fun observeCompleted(): Flow<List<Activity>>
-
-    @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY startTime DESC")
-    suspend fun getCompleted(): List<Activity>
 
     @Query("DELETE FROM activities WHERE id = :id")
     suspend fun deleteById(id: Long)
@@ -38,7 +50,11 @@ interface ActivityDao {
     @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY distanceMeters DESC LIMIT 1")
     fun observeLongestDistance(): Flow<Activity?>
 
-    @Query("SELECT * FROM activities WHERE status = 'completed' AND distanceMeters > 0 ORDER BY (durationMillis / distanceMeters) ASC LIMIT 1")
+    // Runs under a minute are excluded: a few seconds of GPS can give an unrealistic pace
+    @Query(
+        "SELECT * FROM activities WHERE status = 'completed' AND distanceMeters > 0 " +
+            "AND durationMillis >= 60000 ORDER BY (durationMillis / distanceMeters) ASC LIMIT 1"
+    )
     fun observeFastestPace(): Flow<Activity?>
 
     @Query("SELECT * FROM activities WHERE status = 'completed' ORDER BY durationMillis DESC LIMIT 1")

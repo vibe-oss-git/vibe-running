@@ -18,8 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.viberunning.util.FormatUtils
 import com.viberunning.util.PreferencesManager
-import java.util.Locale
 
 @Composable
 fun WeightPromptDialog(
@@ -29,13 +29,7 @@ fun WeightPromptDialog(
     onSave: () -> Unit
 ) {
     val currentLbs = preferencesManager.weightLbs
-    val displayWeight = if (useImperial) {
-        currentLbs.toInt().toString()
-    } else {
-        (currentLbs * 0.453592f).toInt().toString()
-    }
-
-    var weightText by remember { mutableStateOf(displayWeight) }
+    var weightText by remember { mutableStateOf(FormatUtils.weightInputText(currentLbs, useImperial)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -49,17 +43,14 @@ fun WeightPromptDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Current: ${
-                        if (useImperial) String.format(Locale.US, "%.0f lbs", currentLbs)
-                        else String.format(Locale.US, "%.0f kg", currentLbs * 0.453592f)
-                    }",
+                    text = "Current: ${FormatUtils.formatWeight(currentLbs, useImperial)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = weightText,
-                    onValueChange = { weightText = it.filter { c -> c.isDigit() || c == '.' }.take(6) },
+                    onValueChange = { weightText = FormatUtils.filterWeightInput(it) },
                     label = { Text(if (useImperial) "Weight (lbs)" else "Weight (kg)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -70,12 +61,7 @@ fun WeightPromptDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val lbs = if (useImperial) {
-                        weightText.toFloatOrNull() ?: currentLbs
-                    } else {
-                        val kg = weightText.toFloatOrNull() ?: (currentLbs * 0.453592f)
-                        kg / 0.453592f
-                    }
+                    val lbs = FormatUtils.parseWeightToLbs(weightText, useImperial) ?: currentLbs
                     if (lbs > 0f) preferencesManager.weightLbs = lbs
                     onSave()
                 },

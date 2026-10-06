@@ -1,7 +1,9 @@
 package com.viberunning.util
 
 import android.annotation.SuppressLint
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.GnssStatus
 import android.location.LocationManager
 import android.os.Looper
@@ -32,9 +34,23 @@ class GpsStatusMonitor(private val context: Context) {
 
     private var gnssCallback: GnssStatus.Callback? = null
     private var locationCallback: LocationCallback? = null
+    // True while the UI wants monitoring, even if it couldn't start yet
+    private var monitoringRequested = false
 
     @SuppressLint("MissingPermission")
     fun startMonitoring() {
+        monitoringRequested = true
+        // Already running — don't register a second set of callbacks
+        if (gnssCallback != null) return
+
+        // Registering without the permission throws SecurityException
+        if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            _signal.value = GpsSignal.UNAVAILABLE
+            return
+        }
+
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             _signal.value = GpsSignal.UNAVAILABLE
             return
@@ -78,7 +94,13 @@ class GpsStatusMonitor(private val context: Context) {
         fusedClient.requestLocationUpdates(request, locationCallback!!, Looper.getMainLooper())
     }
 
+    /** Call after the location permission is granted, so monitoring that was requested can start. */
+    fun onPermissionGranted() {
+        if (monitoringRequested) startMonitoring()
+    }
+
     fun stopMonitoring() {
+        monitoringRequested = false
         gnssCallback?.let { locationManager.unregisterGnssStatusCallback(it) }
         locationCallback?.let { fusedClient.removeLocationUpdates(it) }
         gnssCallback = null

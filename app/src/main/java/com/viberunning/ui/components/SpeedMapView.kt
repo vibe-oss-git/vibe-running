@@ -260,14 +260,19 @@ fun SpeedMapView(
         Spacer(modifier = Modifier.height(12.dp))
 
         val elevUnit = if (useImperial) "ft" else "m"
+        // Speed ranges are kept in mph internally; convert only for display
+        val speedUnit = if (useImperial) "mph" else "km/h"
+        val speedFactor = if (useImperial) 1f else 1.609344f
 
         MapLegend(
             label = when (colorMode) {
-                MapColorMode.Speed -> "Speed Range (mph)"
+                MapColorMode.Speed -> "Speed Range ($speedUnit)"
                 MapColorMode.Elevation -> "Elevation Range ($elevUnit)"
             },
             filterHint = when (colorMode) {
-                MapColorMode.Speed -> String.format(Locale.US, "Filter: %.2f \u2013 %.2f mph", activeMin, activeMax)
+                MapColorMode.Speed -> String.format(
+                    Locale.US, "Filter: %.2f \u2013 %.2f $speedUnit", activeMin * speedFactor, activeMax * speedFactor
+                )
                 MapColorMode.Elevation -> String.format(Locale.US, "Filter: %.0f \u2013 %.0f $elevUnit", activeMin, activeMax)
             },
             colorStops = activeColorStops,
@@ -277,7 +282,7 @@ fun SpeedMapView(
             absoluteMax = activeAbsMax,
             formatValue = { value ->
                 when (colorMode) {
-                    MapColorMode.Speed -> String.format(Locale.US, "%.2f", value)
+                    MapColorMode.Speed -> String.format(Locale.US, "%.2f", value * speedFactor)
                     MapColorMode.Elevation -> String.format(Locale.US, "%.0f", value)
                 }
             },

@@ -52,34 +52,6 @@ object CalorieEstimator {
     }
 
     /**
-     * Estimate calories burned over a short interval (for real-time display).
-     * @param currentSpeedMps current speed in meters per second
-     * @param intervalMillis time interval in milliseconds
-     * @param weightLbs weight in pounds
-     * @param heightInches height in inches
-     * @param ageYears age in years
-     * @param isMale true for male, false for female
-     * @return estimated calories burned in this interval
-     */
-    fun estimateInterval(
-        currentSpeedMps: Double,
-        intervalMillis: Long,
-        weightLbs: Float,
-        heightInches: Float,
-        ageYears: Int,
-        isMale: Boolean
-    ): Double {
-        if (currentSpeedMps <= 0.0 || intervalMillis <= 0 || weightLbs <= 0f) return 0.0
-
-        val speedMph = currentSpeedMps * 2.23694
-        val met = speedToMet(speedMph)
-        val bmrPerHour = calcBmrPerHour(weightLbs, heightInches, ageYears, isMale)
-        val durationHours = intervalMillis / 3_600_000.0
-
-        return met * bmrPerHour * durationHours
-    }
-
-    /**
      * Calculate hourly BMR using Mifflin-St Jeor equation.
      * Falls back to generic 1 kcal/kg/hr if height or age is missing.
      */
