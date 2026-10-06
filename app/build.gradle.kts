@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+}
+
+// Optional, gitignored keystore.properties at the repo root can override the debug keystore
+// (e.g. debugStoreFile=/home/me/.android/vibe-running-debug.keystore)
+val keystoreProperties = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -22,7 +31,10 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storeFile = file(
+                keystoreProperties.getProperty("debugStoreFile")
+                    ?: (System.getProperty("user.home") + "/.android/debug.keystore")
+            )
         }
     }
 
