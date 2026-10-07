@@ -5,6 +5,7 @@ import com.viberunning.data.db.AppDatabase
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
 import com.viberunning.data.model.PersonalRecord
+import com.viberunning.util.SustainedSpeed
 import kotlinx.coroutines.flow.Flow
 
 class ActivityRepository(private val database: AppDatabase) {
@@ -37,6 +38,18 @@ class ActivityRepository(private val database: AppDatabase) {
     fun observeCompletedActivities(): Flow<List<Activity>> = activityDao.observeCompleted()
 
     suspend fun getCompletedActivityIds(): List<Long> = activityDao.getCompletedIds()
+
+    /**
+     * Recalculates every completed run's max speed from its GPS track with the current
+     * [SustainedSpeed] rules. Runs too short to measure keep their value. One run is loaded
+     * at a time, and the work can be safely repeated if interrupted.
+     */
+    suspend fun recalculateMaxSpeeds() {
+        for (id in activityDao.getCompletedIds()) {
+            val maxSpeed = SustainedSpeed.maxSpeedOf(locationPointDao.getByActivityId(id)) ?: continue
+            activityDao.updateMaxSpeed(id, maxSpeed)
+        }
+    }
 
     /**
      * Adds an activity from a backup with its points. Returns false, adding nothing, when an

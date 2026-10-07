@@ -22,6 +22,11 @@ class PreferencesManager(context: Context) {
             .coerceAtLeast(inactivityPauseMinutes)
         set(value) = prefs.edit().putInt(KEY_INACTIVITY_EXIT_MINUTES, value).apply()
 
+    // SustainedSpeed.ALGORITHM_VERSION that saved runs' max speeds were last recalculated with
+    var maxSpeedAlgorithmVersion: Int
+        get() = prefs.getInt(KEY_MAX_SPEED_ALGORITHM_VERSION, 0)
+        set(value) = prefs.edit().putInt(KEY_MAX_SPEED_ALGORITHM_VERSION, value).apply()
+
     // Height in inches (stored internally, converted for display)
     var heightInches: Float
         get() = prefs.getFloat(KEY_HEIGHT_INCHES, 0f)
@@ -104,6 +109,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_WEIGHT_UPDATED_AT = "weight_updated_at"
         private const val KEY_SEX = "sex"
         private const val KEY_DATE_OF_BIRTH = "date_of_birth"
+        private const val KEY_MAX_SPEED_ALGORITHM_VERSION = "max_speed_algorithm_version"
         private const val KEY_INACTIVITY_PAUSE_MINUTES = "inactivity_pause_minutes"
         private const val KEY_INACTIVITY_EXIT_MINUTES = "inactivity_exit_minutes"
         const val WEIGHT_PROMPT_DAYS = 14

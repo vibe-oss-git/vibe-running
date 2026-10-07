@@ -40,7 +40,7 @@ The screen displays real-time stats:
 - **Distance** — in miles or kilometers
 - **Pace** — minutes per mile or per kilometer
 - **Speed** — current speed
-- **Max Speed** — fastest speed recorded so far
+- **Max Speed** — fastest speed held for about 6 seconds or more so far (see [How max speed is measured](#how-max-speed-is-measured))
 - **Laps / Current Lap** — appears automatically when you complete a lap (pass within 30m of your starting point after covering at least 200m)
 
 ### Pausing and Resuming
@@ -140,12 +140,17 @@ Tap the trash icon in the top-right corner of the detail screen. Confirm the del
 Tap the **Stats** tab to see your all-time records and totals.
 
 ### Personal Records
-- **Top Speed** — fastest instantaneous speed across all runs
+- **Top Speed** — highest max speed across all runs
 - **Longest Distance** — single run with the most distance
 - **Best Pace** — run with the fastest average pace (runs shorter than 1 minute are not counted)
 - **Longest Run** — run with the greatest duration
 
 Tap any personal record card to view the activity where that record was set.
+
+#### How max speed is measured
+Max speed is the fastest speed you held, not the fastest single GPS reading. It's measured as the straight-line distance covered over 5 seconds, and a speed only counts once two consecutive 5-second windows (one GPS reading apart) both reach it. A single bad GPS position can only distort windows that start or end on it, so it can't set your max speed. Readings with poor accuracy (worse than 20 m) are left out when there are enough good ones. Real efforts of about 6 seconds or longer are measured in full.
+
+Runs saved by earlier versions of the app are recalculated this way automatically the first time the updated app starts, and runs imported from a backup are recalculated too. A GPS glitch that lasts two or more consecutive readings can still raise max speed; use **Disregarding a record** below for those.
 
 **Disregarding a record:** if a record is wrong, for example a GPS glitch that shows you running at 30 mph, long-press that record's card and confirm. That run no longer counts toward that one record, and the next best run is shown instead. The run stays in your history and still counts toward the other records and the lifetime totals. This can't be undone. Disregarded records are kept in backup files, so they stay disregarded after an import.
 

@@ -27,6 +27,7 @@ import com.viberunning.util.CalorieEstimator
 import com.viberunning.util.FormatUtils
 import com.viberunning.util.LapDetector
 import com.viberunning.util.PreferencesManager
+import com.viberunning.util.SustainedSpeedTracker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +63,8 @@ class LocationTrackingService : Service() {
     private var isAutoPaused = false
     private var lastSaveTime = 0L
     private var lastMovementTime = 0L
+    // Max speed is the fastest speed held over a few seconds, so GPS glitches can't set it
+    private var speedTracker = SustainedSpeedTracker()
     // Last position where movement was detected; inactivity is measured from here
     private var movementAnchor: Location? = null
     private var inactivityPauseMs = PreferencesManager.DEFAULT_INACTIVITY_PAUSE_MINUTES * 60_000L
@@ -140,6 +143,7 @@ class LocationTrackingService : Service() {
                     // Don't count distance covered while paused
                     lastLocation = null
                     movementAnchor = null
+                    speedTracker.breakWindow()
                     lastMovementTime = System.currentTimeMillis()
                 }
             }
@@ -181,6 +185,7 @@ class LocationTrackingService : Service() {
             isAutoPaused = false
             lastLocation = null
             movementAnchor = null
+            speedTracker = SustainedSpeedTracker()
             lastMovementTime = System.currentTimeMillis()
             loadInactivitySettings()
             _isTracking.value = true
@@ -210,6 +215,7 @@ class LocationTrackingService : Service() {
         maxSpeedMps = 0.0
         lastLocation = null
         movementAnchor = null
+        speedTracker = SustainedSpeedTracker()
         trackingStartTime = System.currentTimeMillis()
         pausedDuration = 0L
         isPaused = false
@@ -273,7 +279,7 @@ class LocationTrackingService : Service() {
         } else 0.0
 
         // Reject GPS jumps: unreasonable speed (>= 50 m/s ~= 112 mph) or a single
-        // step that's too long. Rejected steps add no distance and don't set max speed.
+        // step that's too long. Rejected steps add no distance.
         val plausible = speed < MAX_REASONABLE_SPEED_MPS && distance < MAX_SINGLE_DISTANCE_METERS
 
         // Movement is measured from an anchor rather than step to step. At 1s
@@ -311,9 +317,9 @@ class LocationTrackingService : Service() {
             totalDistanceMeters += distance
         }
 
-        if (plausible && speed > maxSpeedMps) {
-            maxSpeedMps = speed
-        }
+        speedTracker.add(location.time, location.latitude, location.longitude, location.accuracy)
+        // A recovered run keeps the max recorded before the restart
+        maxSpeedMps = maxOf(maxSpeedMps, speedTracker.maxSpeedMps)
 
         if (startLatitude != 0.0) {
             val (newLapCount, insideNow, newLastLapDist) = LapDetector.detectLapCount(

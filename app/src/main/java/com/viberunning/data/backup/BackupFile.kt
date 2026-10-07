@@ -8,6 +8,7 @@ import com.viberunning.data.model.LocationPoint
 import com.viberunning.data.model.PersonalRecord
 import com.viberunning.data.repository.ActivityRepository
 import com.viberunning.util.PreferencesManager
+import com.viberunning.util.SustainedSpeed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.InputStream
@@ -339,7 +340,9 @@ class BackupFile(
             endTime = endTime,
             distanceMeters = distance,
             durationMillis = duration,
-            maxSpeedMps = maxSpeed,
+            // Recalculated from the track, in case the backup came from a version before
+            // the sustained-speed rules
+            maxSpeedMps = SustainedSpeed.maxSpeedOf(points) ?: maxSpeed,
             avgSpeedMps = avgSpeed,
             caloriesBurned = calories.coerceAtLeast(0),
             // Unknown flags are dropped

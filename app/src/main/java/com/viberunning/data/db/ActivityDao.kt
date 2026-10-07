@@ -83,6 +83,9 @@ interface ActivityDao {
     @Query("SELECT SUM(caloriesBurned) FROM activities WHERE status = 'completed'")
     fun observeTotalCalories(): Flow<Int?>
 
+    @Query("UPDATE activities SET maxSpeedMps = :maxSpeedMps WHERE id = :id")
+    suspend fun updateMaxSpeed(id: Long, maxSpeedMps: Double)
+
     @Query("UPDATE activities SET excludedRecords = excludedRecords | :flag WHERE id = :id")
     suspend fun excludeFromRecord(id: Long, flag: Int)
 
