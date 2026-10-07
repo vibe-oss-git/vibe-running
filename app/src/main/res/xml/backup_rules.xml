@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9-11. Every rule requires a device-to-device transfer, so nothing is
+     included in cloud backups. -->
+<full-backup-content>
+    <include domain="database" path="." requireFlags="deviceToDeviceTransfer" />
+    <include domain="sharedpref" path="." requireFlags="deviceToDeviceTransfer" />
+</full-backup-content>

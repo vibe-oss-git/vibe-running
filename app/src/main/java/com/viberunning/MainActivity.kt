@@ -233,6 +233,8 @@ fun VibeRunningNavHost() {
                         useImperial = imperial
                         prefs.useImperial = imperial
                     },
+                    backupViewModel = viewModel(),
+                    onSettingsImported = { useImperial = prefs.useImperial },
                     onBack = { navController.popBackStack() }
                 )
             }

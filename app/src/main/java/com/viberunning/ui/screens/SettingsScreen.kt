@@ -25,6 +25,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.viberunning.ui.components.DataBackupSection
 import com.viberunning.util.PreferencesManager
+import com.viberunning.viewmodel.BackupViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +44,22 @@ fun SettingsScreen(
     preferencesManager: PreferencesManager,
     useImperial: Boolean,
     onToggleUnits: (Boolean) -> Unit,
+    backupViewModel: BackupViewModel,
+    onSettingsImported: () -> Unit,
     onBack: () -> Unit
 ) {
     var pauseMinutes by remember { mutableIntStateOf(preferencesManager.inactivityPauseMinutes) }
     var exitMinutes by remember { mutableIntStateOf(preferencesManager.inactivityExitMinutes) }
+
+    // Show imported settings
+    val settingsImported by backupViewModel.settingsImported.collectAsState()
+    LaunchedEffect(settingsImported) {
+        if (settingsImported > 0) {
+            pauseMinutes = preferencesManager.inactivityPauseMinutes
+            exitMinutes = preferencesManager.inactivityExitMinutes
+            onSettingsImported()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -126,6 +142,10 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+            DataBackupSection(viewModel = backupViewModel)
         }
     }
 }

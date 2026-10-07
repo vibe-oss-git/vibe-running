@@ -44,12 +44,18 @@ Manual construction in `VibeRunningApp` (Application subclass). Database singlet
 ### KML export
 `KmlExporter` generates valid KML 2.2 with `gx:Track` extensions for Google Earth. Files go to cache dir, shared via `FileProvider` with scoped URI grants. The export is triggered from `ActivityDetailScreen` through `HistoryViewModel`.
 
+### Backup
+`BackupFile` (`data/backup/`) writes and reads a streamed JSON backup (`android.util.JsonWriter`/`JsonReader`) with three optional sections: profile, settings, activities. The header (format, `formatVersion`, sections, activity count) comes first so import can list what a file contains without reading the data. Import merges activities (same `startTime` = duplicate, skipped; each activity inserted in its own transaction) and replaces profile/settings values after validating them. `BackupViewModel` runs it off the main thread; the UI is `DataBackupSection` on the Settings screen, using the Storage Access Framework (no storage permission). Bump `formatVersion` on incompatible format changes.
+
+Device-to-device transfer is allowed and cloud backup is not: `allowBackup` is a resource (`false` on API 26–27, `true` on 28+), `res/xml/backup_rules.xml` (API 28–30) includes data only with `requireFlags="deviceToDeviceTransfer"`, and `res/xml/data_extraction_rules.xml` (API 31+) excludes everything from cloud backup and includes the database and preferences for device transfer.
+
 ### Navigation
 Jetpack Compose Navigation with `NavHost`. Four bottom nav tabs (Run/History/Stats/Profile) plus `ActivityDetail` and `Settings` as pushed routes. `Settings` is opened from a gear icon on the Profile tab. Routes defined as sealed class in `NavGraph.kt`.
 
 ## Key Constraints
 
-- **Fully offline** — no INTERNET permission, no network calls. All data stays on-device; `android:allowBackup="false"`.
+- **Fully offline** — no INTERNET permission, no network calls. Data leaves the device only through a file the user exports or a device-to-device transfer; never cloud backup.
+- **Versioning** — every code change bumps `versionCode` by 1 in `app/build.gradle.kts`, and `versionName` too: minor (2.4 → 2.5) for new features, patch (2.4 → 2.4.1) for fixes only.
 - **License** — GPL-3.0 only, with a Play Services linking exception in `NOTICE`. Planned work is tracked in `TODO.md`.
 - **GPS hardware required** — `uses-feature android:required="true"` in manifest.
 - **Min SDK 26** (Android 8.0) — no need for pre-Oreo compat.

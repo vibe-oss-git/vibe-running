@@ -37,6 +37,14 @@ class PreferencesManager(context: Context) {
                 .apply()
         }
 
+    // Restores a weight from a backup, keeping when it was recorded
+    fun restoreWeight(lbs: Float, updatedAt: Long) {
+        prefs.edit()
+            .putFloat(KEY_WEIGHT_LBS, lbs)
+            .putLong(KEY_WEIGHT_UPDATED_AT, updatedAt)
+            .apply()
+    }
+
     // Sex: "male" or "female" (stored as string)
     var sex: String
         get() = prefs.getString(KEY_SEX, "") ?: ""

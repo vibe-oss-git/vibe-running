@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 9+: on, limited to device-to-device transfer by the backup rules -->
+    <bool name="allow_backup">true</bool>
+</resources>

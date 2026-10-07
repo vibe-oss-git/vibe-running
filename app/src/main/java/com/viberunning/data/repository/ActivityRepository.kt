@@ -1,15 +1,15 @@
 package com.viberunning.data.repository
 
-import com.viberunning.data.db.ActivityDao
-import com.viberunning.data.db.LocationPointDao
+import androidx.room.withTransaction
+import com.viberunning.data.db.AppDatabase
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
 import kotlinx.coroutines.flow.Flow
 
-class ActivityRepository(
-    private val activityDao: ActivityDao,
-    private val locationPointDao: LocationPointDao
-) {
+class ActivityRepository(private val database: AppDatabase) {
+    private val activityDao = database.activityDao()
+    private val locationPointDao = database.locationPointDao()
+
     // Activity operations
     suspend fun createActivity(): Long = activityDao.insert(Activity())
 
@@ -31,8 +31,25 @@ class ActivityRepository(
 
     fun observeCompletedActivities(): Flow<List<Activity>> = activityDao.observeCompleted()
 
+    suspend fun getCompletedActivityIds(): List<Long> = activityDao.getCompletedIds()
+
+    /**
+     * Adds an activity from a backup with its points. Returns false, adding nothing, when an
+     * activity with the same start time already exists (it's treated as a duplicate).
+     */
+    suspend fun importActivity(activity: Activity, points: List<LocationPoint>): Boolean =
+        database.withTransaction {
+            if (activityDao.existsWithStartTime(activity.startTime)) return@withTransaction false
+            val id = activityDao.insert(activity.copy(id = 0))
+            locationPointDao.insertAll(points.map { it.copy(id = 0, activityId = id) })
+            true
+        }
+
     // Location point operations
     suspend fun addLocationPoint(point: LocationPoint) = locationPointDao.insert(point)
+
+    suspend fun getLocationPoints(activityId: Long): List<LocationPoint> =
+        locationPointDao.getByActivityId(activityId)
 
     suspend fun getLastLocationTime(activityId: Long): Long? =
         locationPointDao.getLastTimestamp(activityId)

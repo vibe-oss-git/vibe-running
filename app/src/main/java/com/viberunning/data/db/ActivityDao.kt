@@ -72,6 +72,12 @@ interface ActivityDao {
     @Query("SELECT SUM(caloriesBurned) FROM activities WHERE status = 'completed'")
     fun observeTotalCalories(): Flow<Int?>
 
+    @Query("SELECT id FROM activities WHERE status = 'completed' ORDER BY startTime ASC")
+    suspend fun getCompletedIds(): List<Long>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM activities WHERE startTime = :startTime)")
+    suspend fun existsWithStartTime(startTime: Long): Boolean
+
     @Query("SELECT * FROM activities WHERE status = 'in_progress' ORDER BY startTime DESC LIMIT 1")
     suspend fun getInProgress(): Activity?
 }

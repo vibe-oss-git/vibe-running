@@ -12,6 +12,7 @@ A private, fully offline GPS run tracker for Android. No accounts, no cloud, no 
 - **Stats** — personal records (top speed, longest distance, best pace, longest run), lifetime totals, and per-activity trend charts
 - **Calorie estimates** — based on the Mifflin-St Jeor BMR equation and MET values from the Compendium of Physical Activities
 - **KML export** — share any run as a KML 2.2 file with a timed track for playback in Google Earth
+- **Backup file** — export profile data, settings, and run history to a file and import it on another phone; runs already there are skipped
 - **Imperial or metric** units
 
 See [Usage.md](Usage.md) for a full guide to every screen.
@@ -19,8 +20,8 @@ See [Usage.md](Usage.md) for a full guide to every screen.
 ## Privacy
 
 - The app has no `INTERNET` permission and makes no network calls.
-- All data is stored in a local database on the device. Android backup is disabled, so it isn't copied to cloud backups.
-- Exported KML files are only shared when and where you choose to share them.
+- All data is stored in a local database on the device. It is never included in cloud backups. On Android 9 and newer it can be copied to a new phone during a direct device-to-device transfer (cable or local wireless setup).
+- Exported KML and backup files are only saved or shared where you choose.
 
 Location updates currently come from Google Play Services' fused location provider, so the app needs Play Services on the device. Replacing it with Android's built-in `LocationManager` is planned. See [TODO.md](TODO.md).
 

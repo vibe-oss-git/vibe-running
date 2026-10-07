@@ -13,7 +13,7 @@ On first launch, the app requests:
 Grant both permissions when prompted. If denied, you can re-enable them in your device's Settings > Apps > Vibe Running > Permissions.
 
 ### No Internet Required
-Vibe Running is completely offline. It never connects to the internet. All your data stays on your device.
+Vibe Running is completely offline. It never connects to the internet. Your data stays on your device unless you export it to a file or move it to a new phone with a device-to-device transfer. It is never included in cloud backups.
 
 ---
 
@@ -234,6 +234,24 @@ Two settings control the [automatic inactivity pause](#automatic-inactivity-paus
 - **End run after** — 1, 2 (default), 3, 5, 10, or 15 minutes. This can't be shorter than the auto-pause time; choices below it are disabled, and raising the auto-pause time above it raises this setting to match.
 
 Changes apply from your next run, not a run in progress.
+
+### Backup: Export and Import
+Use **Export data** and **Import data** at the bottom of Settings to keep a copy of your data or move it to another phone.
+
+**Export:** choose what to include (all are selected by default), then where to save the file:
+- **Profile data** — height, weight, sex, and date of birth
+- **Settings** — units and inactivity timers
+- **Activity** — all completed runs, including their GPS tracks
+
+**Import:** pick a backup file. The app shows only the items that file contains, all selected by default, so a file exported without Profile data offers only Settings and Activity.
+- Runs are added to your history. A run with the same start time as one already on the phone is skipped, so importing the same file twice doesn't create duplicates.
+- Imported profile data and settings replace the current values.
+- Import isn't available while a run is in progress.
+
+The file is plain JSON (`vibe-running-backup-YYYYMMDD.json`). It contains your locations, so store and share it carefully.
+
+### Moving to a New Phone
+On Android 9 and newer, a direct device-to-device transfer (by cable, or the local wireless transfer during new phone setup) copies your run history, profile, and settings automatically. Whether this happens depends on the phone maker's transfer tool, so exporting a backup file first is the reliable way.
 
 ---
 

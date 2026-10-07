@@ -20,7 +20,7 @@ class VibeRunningApp : Application() {
     override fun onCreate() {
         super.onCreate()
         val db = AppDatabase.getInstance(this)
-        repository = ActivityRepository(db.activityDao(), db.locationPointDao())
+        repository = ActivityRepository(db)
         preferencesManager = PreferencesManager(this)
         gpsStatusMonitor = GpsStatusMonitor(this)
         createNotificationChannel()
