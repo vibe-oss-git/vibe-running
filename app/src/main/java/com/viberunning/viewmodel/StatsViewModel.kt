@@ -5,9 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.viberunning.VibeRunningApp
 import com.viberunning.data.model.Activity
+import com.viberunning.data.model.PersonalRecord
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,4 +41,9 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
     val completedActivities: StateFlow<List<Activity>> = repository.observeCompletedActivities()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Permanently excludes the run from this record; the next-best run takes its place. */
+    fun disregardRecord(activityId: Long, record: PersonalRecord) {
+        viewModelScope.launch { repository.disregardRecord(activityId, record) }
+    }
 }

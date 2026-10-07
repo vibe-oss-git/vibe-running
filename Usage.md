@@ -147,6 +147,8 @@ Tap the **Stats** tab to see your all-time records and totals.
 
 Tap any personal record card to view the activity where that record was set.
 
+**Disregarding a record:** if a record is wrong, for example a GPS glitch that shows you running at 30 mph, long-press that record's card and confirm. That run no longer counts toward that one record, and the next best run is shown instead. The run stays in your history and still counts toward the other records and the lifetime totals. This can't be undone. Disregarded records are kept in backup files, so they stay disregarded after an import.
+
 ### Lifetime Totals
 - Total number of completed activities
 - Total distance across all runs

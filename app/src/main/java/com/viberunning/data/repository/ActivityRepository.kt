@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.viberunning.data.db.AppDatabase
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
+import com.viberunning.data.model.PersonalRecord
 import kotlinx.coroutines.flow.Flow
 
 class ActivityRepository(private val database: AppDatabase) {
@@ -29,17 +30,27 @@ class ActivityRepository(private val database: AppDatabase) {
 
     suspend fun deleteActivity(id: Long) = activityDao.deleteById(id)
 
+    /** Permanently stops a run from counting toward one personal record. */
+    suspend fun disregardRecord(activityId: Long, record: PersonalRecord) =
+        activityDao.excludeFromRecord(activityId, record.flag)
+
     fun observeCompletedActivities(): Flow<List<Activity>> = activityDao.observeCompleted()
 
     suspend fun getCompletedActivityIds(): List<Long> = activityDao.getCompletedIds()
 
     /**
      * Adds an activity from a backup with its points. Returns false, adding nothing, when an
-     * activity with the same start time already exists (it's treated as a duplicate).
+     * activity with the same start time already exists (it's treated as a duplicate). Records
+     * disregarded in the backup are still disregarded on the existing activity.
      */
     suspend fun importActivity(activity: Activity, points: List<LocationPoint>): Boolean =
         database.withTransaction {
-            if (activityDao.existsWithStartTime(activity.startTime)) return@withTransaction false
+            if (activityDao.existsWithStartTime(activity.startTime)) {
+                if (activity.excludedRecords != 0) {
+                    activityDao.excludeFromRecordsByStartTime(activity.startTime, activity.excludedRecords)
+                }
+                return@withTransaction false
+            }
             val id = activityDao.insert(activity.copy(id = 0))
             locationPointDao.insertAll(points.map { it.copy(id = 0, activityId = id) })
             true

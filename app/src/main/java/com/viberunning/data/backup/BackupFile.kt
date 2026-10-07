@@ -5,6 +5,7 @@ import android.util.JsonToken
 import android.util.JsonWriter
 import com.viberunning.data.model.Activity
 import com.viberunning.data.model.LocationPoint
+import com.viberunning.data.model.PersonalRecord
 import com.viberunning.data.repository.ActivityRepository
 import com.viberunning.util.PreferencesManager
 import kotlinx.coroutines.Dispatchers
@@ -276,6 +277,7 @@ class BackupFile(
         w.name("maxSpeedMps").value(finite(activity.maxSpeedMps))
         w.name("avgSpeedMps").value(finite(activity.avgSpeedMps))
         w.name("caloriesBurned").value(activity.caloriesBurned.toLong())
+        w.name("excludedRecords").value(activity.excludedRecords.toLong())
         // Each point: [latitude, longitude, altitude, speedMps, timestamp, accuracy]
         w.name("points").beginArray()
         for (p in points) {
@@ -301,6 +303,7 @@ class BackupFile(
         var maxSpeed = 0.0
         var avgSpeed = 0.0
         var calories = 0
+        var excludedRecords = 0
         val points = mutableListOf<LocationPoint>()
         r.beginObject()
         while (r.hasNext()) {
@@ -317,6 +320,7 @@ class BackupFile(
                 "maxSpeedMps" -> maxSpeed = r.nextDouble()
                 "avgSpeedMps" -> avgSpeed = r.nextDouble()
                 "caloriesBurned" -> calories = r.nextInt()
+                "excludedRecords" -> excludedRecords = r.nextInt()
                 "points" -> {
                     r.beginArray()
                     while (r.hasNext()) readPoint(r)?.let { points += it }
@@ -338,6 +342,8 @@ class BackupFile(
             maxSpeedMps = maxSpeed,
             avgSpeedMps = avgSpeed,
             caloriesBurned = calories.coerceAtLeast(0),
+            // Unknown flags are dropped
+            excludedRecords = excludedRecords and PersonalRecord.ALL_FLAGS,
             status = Activity.STATUS_COMPLETED
         )
         return activity to points

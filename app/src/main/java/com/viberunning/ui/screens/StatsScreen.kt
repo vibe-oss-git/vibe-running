@@ -11,15 +11,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.viberunning.data.model.Activity
+import com.viberunning.data.model.PersonalRecord
 import com.viberunning.ui.components.MetricChart
 import com.viberunning.ui.components.StatsCard
 import com.viberunning.util.FormatUtils
@@ -40,6 +47,36 @@ fun StatsScreen(
     val totalDuration by viewModel.totalDuration.collectAsState()
     val totalCalories by viewModel.totalCalories.collectAsState()
     val completedActivities by viewModel.completedActivities.collectAsState()
+
+    // Record the user long-pressed, waiting for confirmation
+    var pendingDisregard by remember { mutableStateOf<Pair<PersonalRecord, Activity>?>(null) }
+    pendingDisregard?.let { (record, activity) ->
+        AlertDialog(
+            onDismissRequest = { pendingDisregard = null },
+            title = { Text("Disregard ${record.label}?") },
+            text = {
+                Text(
+                    "${recordValue(record, activity, useImperial)} from your run on " +
+                        "${FormatUtils.formatDayOfWeek(activity.startTime)}, " +
+                        "${FormatUtils.formatDate(activity.startTime)} will no longer count as your " +
+                        "${record.label}. The next best run will be shown instead.\n\n" +
+                        "The run stays in your history and still counts toward your other records " +
+                        "and lifetime totals. This can't be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.disregardRecord(activity.id, record)
+                    pendingDisregard = null
+                }) {
+                    Text("Disregard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDisregard = null }) { Text("Cancel") }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -68,7 +105,12 @@ fun StatsScreen(
             // Personal records
             Text(
                 text = "Personal Records",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "Tap a record to see the run. Long-press to disregard it, e.g. after a GPS glitch.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
@@ -80,13 +122,15 @@ fun StatsScreen(
                     label = "Top Speed",
                     value = topSpeed?.let { FormatUtils.formatSpeed(it.maxSpeedMps, useImperial) } ?: "--",
                     modifier = Modifier.weight(1f),
-                    onClick = topSpeed?.let { { onActivityClick(it.id) } }
+                    onClick = topSpeed?.let { { onActivityClick(it.id) } },
+                    onLongClick = topSpeed?.let { { pendingDisregard = PersonalRecord.TOP_SPEED to it } }
                 )
                 StatsCard(
                     label = "Longest Distance",
                     value = longestDistance?.let { FormatUtils.formatDistance(it.distanceMeters, useImperial) } ?: "--",
                     modifier = Modifier.weight(1f),
-                    onClick = longestDistance?.let { { onActivityClick(it.id) } }
+                    onClick = longestDistance?.let { { onActivityClick(it.id) } },
+                    onLongClick = longestDistance?.let { { pendingDisregard = PersonalRecord.LONGEST_DISTANCE to it } }
                 )
             }
 
@@ -102,7 +146,8 @@ fun StatsScreen(
                         FormatUtils.formatPace(it.avgSpeedMps, useImperial)
                     } ?: "--",
                     modifier = Modifier.weight(1f),
-                    onClick = fastestPace?.let { { onActivityClick(it.id) } }
+                    onClick = fastestPace?.let { { onActivityClick(it.id) } },
+                    onLongClick = fastestPace?.let { { pendingDisregard = PersonalRecord.BEST_PACE to it } }
                 )
                 StatsCard(
                     label = "Longest Run",
@@ -110,7 +155,8 @@ fun StatsScreen(
                         FormatUtils.formatDuration(it.durationMillis)
                     } ?: "--",
                     modifier = Modifier.weight(1f),
-                    onClick = longestDuration?.let { { onActivityClick(it.id) } }
+                    onClick = longestDuration?.let { { onActivityClick(it.id) } },
+                    onLongClick = longestDuration?.let { { pendingDisregard = PersonalRecord.LONGEST_RUN to it } }
                 )
             }
 
@@ -200,3 +246,11 @@ fun StatsScreen(
         }
     }
 }
+
+private fun recordValue(record: PersonalRecord, activity: Activity, useImperial: Boolean): String =
+    when (record) {
+        PersonalRecord.TOP_SPEED -> FormatUtils.formatSpeed(activity.maxSpeedMps, useImperial)
+        PersonalRecord.LONGEST_DISTANCE -> FormatUtils.formatDistance(activity.distanceMeters, useImperial)
+        PersonalRecord.BEST_PACE -> FormatUtils.formatPace(activity.avgSpeedMps, useImperial)
+        PersonalRecord.LONGEST_RUN -> FormatUtils.formatDuration(activity.durationMillis)
+    }
